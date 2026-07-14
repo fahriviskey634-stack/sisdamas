@@ -43,3 +43,5 @@ next-env.d.ts
 # Large workspace assets
 /Catatan_PKM_SISDAMAS.zip
 /Color Palate.png
+
+.vercel
