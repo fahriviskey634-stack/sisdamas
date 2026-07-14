@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F6F1E6; /* Polaroid soft-cream color */
+  --foreground: #092430; /* Dark teal for text */
+}
+
+@theme inline {
+  /* IG kkn.sisdamas.56 Custom Brand Color Palette */
+  --color-teal-tua: #092430;
+  --color-teal-sedang: #194A5B;
+  --color-kabut: #407F8F;
+  --color-polaroid: #F6F1E6;
+  --color-transisi: #D9CBB0;
+  --color-hijab: #DFB0B3;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background-color: #F8FAFC; /* Clean light slate background */
+  color: #092430;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}

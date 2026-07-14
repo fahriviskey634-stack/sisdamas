@@ -1,0 +1,3 @@
+# CODING STANDARDS
+
+Dummy content for CODING_STANDARDS.md.
