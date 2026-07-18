@@ -5,21 +5,21 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 
 const KKN_MEMBERS = [
-  { nim: '1234060108', name: 'Aisyah Shofa Aini', gender: 'P', prodi: 'S1 - Ilmu Komunikasi Humas', fakultas: 'Dakwah dan Komunikasi', email: 'aisyah.shofa@sukahaji-official.id', division: 'Sekretaris (BPH)' },
-  { nim: '1231030055', name: 'Arpan Maulana', gender: 'L', prodi: 'S1 - Ilmu Al-Qur\'an dan Tafsir', fakultas: 'Ushuluddin', email: 'arpan.maulana@sukahaji-official.id', division: 'Ketua (BPH)' },
-  { nim: '1237010003', name: 'Tifa Astrianti', gender: 'P', prodi: 'S1 - Matematika', fakultas: 'Sains dan Teknologi', email: 'tifa.astrianti@sukahaji-official.id', division: 'Bendahara (BPH)' },
-  { nim: '1235060059', name: 'Hani Husnul Nuwat', gender: 'P', prodi: 'S1 - Ilmu Perpustakaan dan Informasi Islam', fakultas: 'Adab dan Humaniora', email: 'hani.husnul@sukahaji-official.id', division: 'Divisi Acara' },
-  { nim: '1232040021', name: 'Indah Sri Rahayu', gender: 'P', prodi: 'S1 - Pendidikan Bahasa Inggris', fakultas: 'Tarbiyah dan Keguruan', email: 'indah.sri@sukahaji-official.id', division: 'Divisi Acara' },
-  { nim: '1232050026', name: 'Hasna Khairinisa Asy Syifa', gender: 'P', prodi: 'S1 - Pendidikan Matematika', fakultas: 'Tarbiyah dan Keguruan', email: 'hasna.khairinisa@sukahaji-official.id', division: 'Divisi Acara' },
-  { nim: '1238010111', name: 'Ilya Hanifah Hakim', gender: 'P', prodi: 'S1 - Administrasi Publik', fakultas: 'Ilmu Sosial dan Ilmu Politik', email: 'ilya.hanifah@sukahaji-official.id', division: 'Divisi Media' },
-  { nim: '1239230099', name: 'Evan Fadhil Al Akbar', gender: 'L', prodi: 'S1 - Manajemen Keuangan Syariah', fakultas: 'Ekonomi dan Bisnis Islam', email: 'evan.fadhil@sukahaji-official.id', division: 'Divisi Media' },
-  { nim: '1235020162', name: 'Hilya Izza Fitriani', gender: 'P', prodi: 'S1 - Bahasa dan Sastra Arab', fakultas: 'Adab dan Humaniora', email: 'hilya.izza@sukahaji-official.id', division: 'Divisi Media' },
-  { nim: '1239240038', name: 'Kayyis Yasra Ismaya', gender: 'P', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'kayyis.yasra@sukahaji-official.id', division: 'Divisi Humas' },
-  { nim: '1237030018', name: 'Fahry Rizky Samsudin', gender: 'L', prodi: 'S1 - Fisika', fakultas: 'Sains dan Teknologi', email: 'fahry.rizky@sukahaji-official.id', division: 'Divisi Humas' },
-  { nim: '1236000005', name: 'Nova Aulia Rahmawan', gender: 'P', prodi: 'S1 - Psikologi', fakultas: 'Psikologi', email: 'nova.aulia@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1234060108', name: 'Aisyah Shofa Aini', gender: 'P', prodi: 'S1 - Ilmu Komunikasi Humas', fakultas: 'Dakwah dan Komunikasi', email: 'aisyah@sukahaji-official.id', division: 'Sekretaris (BPH)' },
+  { nim: '1231030055', name: 'Arpan Maulana', gender: 'L', prodi: 'S1 - Ilmu Al-Qur\'an dan Tafsir', fakultas: 'Ushuluddin', email: 'arpan@sukahaji-official.id', division: 'Ketua (BPH)' },
+  { nim: '1237010003', name: 'Tifa Astrianti', gender: 'P', prodi: 'S1 - Matematika', fakultas: 'Sains dan Teknologi', email: 'tifa@sukahaji-official.id', division: 'Bendahara (BPH)' },
+  { nim: '1235060059', name: 'Hani Husnul Nuwat', gender: 'P', prodi: 'S1 - Ilmu Perpustakaan dan Informasi Islam', fakultas: 'Adab dan Humaniora', email: 'hani@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232040021', name: 'Indah Sri Rahayu', gender: 'P', prodi: 'S1 - Pendidikan Bahasa Inggris', fakultas: 'Tarbiyah dan Keguruan', email: 'indah@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232050026', name: 'Hasna Khairinisa Asy Syifa', gender: 'P', prodi: 'S1 - Pendidikan Matematika', fakultas: 'Tarbiyah dan Keguruan', email: 'hasna@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1238010111', name: 'Ilya Hanifah Hakim', gender: 'P', prodi: 'S1 - Administrasi Publik', fakultas: 'Ilmu Sosial dan Ilmu Politik', email: 'ilya@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239230099', name: 'Evan Fadhil Al Akbar', gender: 'L', prodi: 'S1 - Manajemen Keuangan Syariah', fakultas: 'Ekonomi dan Bisnis Islam', email: 'evan@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1235020162', name: 'Hilya Izza Fitriani', gender: 'P', prodi: 'S1 - Bahasa dan Sastra Arab', fakultas: 'Adab dan Humaniora', email: 'hilya@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239240038', name: 'Kayyis Yasra Ismaya', gender: 'P', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'kayyis@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1237030018', name: 'Fahry Rizky Samsudin', gender: 'L', prodi: 'S1 - Fisika', fakultas: 'Sains dan Teknologi', email: 'fahri@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1236000005', name: 'Nova Aulia Rahmawan', gender: 'P', prodi: 'S1 - Psikologi', fakultas: 'Psikologi', email: 'nova@sukahaji-official.id', division: 'Divisi Logsum' },
   { nim: '1232090080', name: 'Nurdin', gender: 'L', prodi: 'S1 - Pendidikan Guru Madrasah Ibtidaiyah', fakultas: 'Tarbiyah dan Keguruan', email: 'nurdin@sukahaji-official.id', division: 'Divisi Logsum' },
-  { nim: '1231040133', name: 'Hanifah Mauludiah', gender: 'P', prodi: 'S1 - Tasawuf dan Psikoterapi', fakultas: 'Ushuluddin', email: 'hanifah.mauludiah@sukahaji-official.id', division: 'Divisi Logsum' },
-  { nim: '1239240280', name: 'Ridwan Firmansyah', gender: 'L', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'ridwan.firmansyah@sukahaji-official.id', division: 'Divisi Logsum' }
+  { nim: '1231040133', name: 'Hanifah Mauludiah', gender: 'P', prodi: 'S1 - Tasawuf dan Psikoterapi', fakultas: 'Ushuluddin', email: 'hanifah@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1239240280', name: 'Ridwan Firmansyah', gender: 'L', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'ridwan@sukahaji-official.id', division: 'Divisi Logsum' }
 ];
 
 export default function LoginPage() {
@@ -42,20 +42,22 @@ export default function LoginPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
+    const normalizedEmail = email.toLowerCase().trim().replace('fahry@', 'fahri@');
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: normalizedEmail, password })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         // Fallback bypass for offline developer testing or specific members
-        const member = KKN_MEMBERS.find(m => m.email === email);
+        const member = KKN_MEMBERS.find(m => m.email === normalizedEmail);
         if (
-          (member || email === 'surveyor@sukahaji-official.id') &&
+          (member || normalizedEmail === 'surveyor@sukahaji-official.id') &&
           password === 'sukahaji123'
         ) {
           const sessionData = member 
@@ -76,10 +78,10 @@ export default function LoginPage() {
       }
 
       // If server-side login succeeds, set the cookie as well
-      const member = KKN_MEMBERS.find(m => m.email === email);
+      const member = KKN_MEMBERS.find(m => m.email === normalizedEmail);
       const sessionData = member 
         ? { isMember: true, email: member.email, name: member.name, nim: member.nim, prodi: member.prodi, fakultas: member.fakultas, division: member.division }
-        : { isMember: false, email: email, name: 'Admin/DPL', nim: 'ADMIN56', prodi: 'Sistem Informasi', fakultas: 'Sains dan Teknologi', division: 'Fasilitator Utama' };
+        : { isMember: false, email: normalizedEmail, name: 'Admin/DPL', nim: 'ADMIN56', prodi: 'Sistem Informasi', fakultas: 'Sains dan Teknologi', division: 'Fasilitator Utama' };
       document.cookie = `kkn-member-session=${encodeURIComponent(JSON.stringify(sessionData))}; path=/; max-age=86400`;
 
       setSuccessMsg('Login berhasil! Mengarahkan...');
@@ -87,9 +89,9 @@ export default function LoginPage() {
         router.push('/app/dashboard');
       }, 1000);
     } catch (err: any) {
-      const member = KKN_MEMBERS.find(m => m.email === email);
+      const member = KKN_MEMBERS.find(m => m.email === normalizedEmail);
       if (
-        (member || email === 'surveyor@sukahaji-official.id') &&
+        (member || normalizedEmail === 'surveyor@sukahaji-official.id') &&
         password === 'sukahaji123'
       ) {
         const sessionData = member 
