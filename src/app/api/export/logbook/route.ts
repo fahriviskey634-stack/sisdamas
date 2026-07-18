@@ -314,7 +314,7 @@ export async function GET(req: NextRequest) {
                         new docx.Paragraph({ text: "Bandung Barat, ........................ 2026" }),
                         new docx.Paragraph({ children: [new docx.TextRun({ text: "Peserta KKN,", bold: true })] }),
                         new docx.Paragraph({ spacing: { before: 1000 } }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: member.name, bold: true, underline: {} })] }),
+                        new docx.Paragraph({ children: [new docx.TextRun({ text: member.name, bold: true })] }),
                         new docx.Paragraph({ text: `NIM. ${member.nim}` })
                       ]
                     }),
@@ -323,7 +323,7 @@ export async function GET(req: NextRequest) {
                         new docx.Paragraph({ text: "Mengetahui," }),
                         new docx.Paragraph({ children: [new docx.TextRun({ text: "Ketua Kelompok 56,", bold: true })] }),
                         new docx.Paragraph({ spacing: { before: 1000 } }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "Arpan Maulana", bold: true, underline: {} })] }),
+                        new docx.Paragraph({ children: [new docx.TextRun({ text: "Arpan Maulana", bold: true })] }),
                         new docx.Paragraph({ text: "NIM. 1231030055" })
                       ]
                     })
@@ -337,7 +337,7 @@ export async function GET(req: NextRequest) {
                         new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 600 }, text: "Mengetahui," }),
                         new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dosen Pembimbing Lapangan (DPL) Kelompok 56", bold: true })] }),
                         new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 1000 } }),
-                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dr. Hj. Yani Heryani, M.Ag.", bold: true, underline: {} })] }),
+                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dr. Hj. Yani Heryani, M.Ag.", bold: true })] }),
                         new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: "NIP. 197207101998021001" })
                       ]
                     })
@@ -593,7 +593,7 @@ export async function GET(req: NextRequest) {
                   <p class="bold" style="margin: 5px 0 0 0;">Peserta KKN,</p>
                 </div>
                 <div>
-                  <p class="bold underline" style="margin: 0;">${member.name}</p>
+                  <p class="bold" style="margin: 0;">${member.name}</p>
                   <p style="margin: 5px 0 0 0;">NIM. ${member.nim}</p>
                 </div>
               </div>
@@ -603,7 +603,7 @@ export async function GET(req: NextRequest) {
                   <p class="bold" style="margin: 5px 0 0 0;">Ketua Kelompok 56,</p>
                 </div>
                 <div>
-                  <p class="bold underline" style="margin: 0;">Arpan Maulana</p>
+                  <p class="bold" style="margin: 0;">Arpan Maulana</p>
                   <p style="margin: 5px 0 0 0;">NIM. 1231030055</p>
                 </div>
               </div>
@@ -615,7 +615,7 @@ export async function GET(req: NextRequest) {
                 <p class="bold" style="margin: 5px 0 0 0;">Dosen Pembimbing Lapangan (DPL) Kelompok 56</p>
               </div>
               <div style="margin-top: 50px;">
-                <p class="bold underline" style="margin: 0;">Dr. Hj. Yani Heryani, M.Ag.</p>
+                <p class="bold" style="margin: 0;">Dr. Hj. Yani Heryani, M.Ag.</p>
                 <p style="margin: 5px 0 0 0;">NIP. 197207101998021001</p>
               </div>
             </div>

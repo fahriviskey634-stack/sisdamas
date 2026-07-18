@@ -418,8 +418,9 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
   const [calendarSyncResult, setCalendarSyncResult] = useState<any>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [googleCalendarId, setGoogleCalendarId] = useState<string>('primary');
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
 
-  // Fetch Google Calendar ID dynamically
+  // Fetch Google Calendar ID and Events list dynamically
   useEffect(() => {
     fetch('/api/google/calendar/id')
       .then(res => res.json())
@@ -429,6 +430,15 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
         }
       })
       .catch(err => console.error("Failed to load Calendar ID", err));
+
+    fetch('/api/google/calendar/events')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.events) {
+          setCalendarEvents(data.events);
+        }
+      })
+      .catch(err => console.error("Failed to load Calendar events", err));
   }, []);
 
   // Detailed mock surveys seed matching exactly the 82 completed surveys
@@ -792,14 +802,47 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
             </span>
           </div>
 
-          <div className="w-full h-[450px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 relative">
-            <iframe
-              src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(googleCalendarId)}&ctz=Asia%2FJakarta`}
-              style={{ border: 0 }}
-              className="w-full h-full absolute inset-0"
-              frameBorder="0"
-              scrolling="no"
-            ></iframe>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-2">
+              <div className="w-full h-[450px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 relative">
+                <iframe
+                  src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(googleCalendarId)}&ctz=Asia%2FJakarta`}
+                  style={{ border: 0 }}
+                  className="w-full h-full absolute inset-0"
+                  frameBorder="0"
+                  scrolling="no"
+                ></iframe>
+              </div>
+              <p className="text-[9px] text-slate-450 italic leading-relaxed">
+                💡 <strong>Catatan Google:</strong> Jika kalender meminta login Google di atas, pastikan kalender terkait telah diset menjadi <strong>Publik</strong> di pengaturan Google Calendar Anda. Anda juga dapat membaca daftar agenda terperinci secara langsung pada panel <strong>Agenda Timeline</strong> di sebelah kanan.
+              </p>
+            </div>
+
+            <div className="lg:col-span-1 bg-slate-50 border border-slate-150 p-4 rounded-xl flex flex-col h-[450px]">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">
+                📋 Agenda Timeline KKN 56
+              </span>
+              <div className="overflow-y-auto flex-1 space-y-3 pr-1 text-xs">
+                {calendarEvents.map((evt, idx) => {
+                  const startStr = evt.start?.date || evt.start?.dateTime || '';
+                  const formattedDate = startStr 
+                    ? new Date(startStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '-';
+                  return (
+                    <div key={evt.id || idx} className="p-3 bg-white rounded-lg border border-slate-200/60 shadow-xs hover:border-emerald-300 transition">
+                      <p className="text-[9px] font-bold font-mono text-emerald-600">{formattedDate}</p>
+                      <h4 className="font-extrabold text-slate-800 mt-0.5 leading-snug">{evt.summary}</h4>
+                      {evt.description && (
+                        <p className="text-[10px] text-slate-400 mt-1 leading-relaxed line-clamp-2">{evt.description}</p>
+                      )}
+                    </div>
+                  );
+                })}
+                {calendarEvents.length === 0 && (
+                  <p className="text-[10px] text-slate-400 italic text-center py-8">Tidak ada agenda kegiatan terdaftar.</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2542,14 +2585,14 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                   <p>Bandung Barat, ........................ 2026</p>
                   <p className="font-bold">Peserta KKN,</p>
                   <div className="h-16"></div>
-                  <p className="font-bold underline">{activeMember?.name}</p>
+                  <p className="font-bold">{activeMember?.name}</p>
                   <p>NIM. {activeMember?.nim}</p>
                 </div>
                 <div className="text-right md:text-left">
                   <p>Mengetahui,</p>
                   <p className="font-bold">Ketua Kelompok 56,</p>
                   <div className="h-16"></div>
-                  <p className="font-bold underline">Arpan Maulana</p>
+                  <p className="font-bold">Arpan Maulana</p>
                   <p>NIM. 1231030055</p>
                 </div>
               </div>
@@ -2559,7 +2602,7 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                 <p>Mengetahui,</p>
                 <p className="font-semibold">Dosen Pembimbing Lapangan (DPL) Kelompok 56</p>
                 <div className="h-16"></div>
-                <p className="font-bold underline">Dr. Hj. Yani Heryani, M.Ag.</p>
+                <p className="font-bold">Dr. Hj. Yani Heryani, M.Ag.</p>
                 <p>NIP. 197207101998021001</p>
               </div>
             </div>

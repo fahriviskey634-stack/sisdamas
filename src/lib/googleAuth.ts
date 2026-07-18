@@ -5,8 +5,22 @@ import crypto from 'crypto';
  * Runs entirely in Next.js Serverless Node.js runtime environment.
  */
 export async function getGoogleAccessToken(scopes: string[]): Promise<string> {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, '\n');
+  let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+
+  if (privateKey && privateKey.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(privateKey);
+      email = parsed.client_email || email;
+      privateKey = parsed.private_key;
+    } catch (e) {
+      console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY as JSON", e);
+    }
+  }
+
+  if (privateKey) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
 
   if (!email || !privateKey || email.includes('placeholder')) {
     throw new Error('Google Service Account credentials missing or placeholder values detected.');
