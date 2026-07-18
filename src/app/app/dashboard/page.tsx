@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Camera, Navigation, AlertTriangle, CheckCircle, Plus, Info, Tag, Key, Shield, ArrowLeft, ArrowRight, BookOpen, Printer } from 'lucide-react';
+import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Camera, Navigation, AlertTriangle, CheckCircle, Plus, Info, Tag, Key, Shield, ArrowLeft, ArrowRight, BookOpen, Printer, Menu, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
 
@@ -78,6 +78,7 @@ function DashboardSPA() {
   const [draftCount, setDraftCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [rtTargets, setRtTargets] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -191,27 +192,48 @@ function DashboardSPA() {
   // Switch tab in Single-Page Application style
   const switchTab = (tabName: string) => {
     setCurrentTab(tabName);
+    setMobileMenuOpen(false);
     // Update browser URL query param silently without full page reload
     window.history.pushState(null, '', `/app/dashboard?tab=${tabName}`);
   };
 
   return (
     <div className="min-h-screen bg-[#FBFBFA] flex font-sans text-slate-800 antialiased selection:bg-teal-sedang selection:text-white">
-      {/* Sidebar - Fixed Left (Premium Dark Glassmorphic Sidebar) */}
-      <aside className="w-64 bg-[#092430] text-[#F6F1E6] flex flex-col justify-between hidden md:flex shrink-0 border-r border-[#194A5B]/30 shadow-xl relative z-30">
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop: static left | Mobile: sliding drawer */}
+      <aside className={`w-64 bg-[#092430] text-[#F6F1E6] flex flex-col justify-between shrink-0 border-r border-[#194A5B]/30 shadow-xl
+        fixed md:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         <div>
           {/* Logo & Branding Area */}
           <div className="p-6 border-b border-[#194A5B]/35 bg-[#071d26]/40">
-            <div className="flex items-center gap-2.5">
-              <img 
-                src="/logo.jpg" 
-                alt="Logo Kelompok 56" 
-                className="h-9 w-9 rounded-xl object-cover shadow-md border border-[#194A5B]/30"
-              />
-              <div>
-                <h2 className="text-sm font-extrabold tracking-wider text-[#F6F1E6] uppercase">SISDAMAS 56</h2>
-                <p className="text-[9px] text-slate-400 font-semibold tracking-wide mt-0.5">Desa Sukahaji • Dusun 2</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <img 
+                  src="/logo.jpg" 
+                  alt="Logo Kelompok 56" 
+                  className="h-9 w-9 rounded-xl object-cover shadow-md border border-[#194A5B]/30"
+                />
+                <div>
+                  <h2 className="text-sm font-extrabold tracking-wider text-[#F6F1E6] uppercase">SISDAMAS 56</h2>
+                  <p className="text-[9px] text-slate-400 font-semibold tracking-wide mt-0.5">Desa Sukahaji • Dusun 2</p>
+                </div>
               </div>
+              {/* Mobile close button */}
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
           </div>
 
@@ -327,12 +349,19 @@ function DashboardSPA() {
       </aside>
 
       {/* Main Panel Content Area */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
+      <main className="flex-1 flex flex-col overflow-y-auto w-full">
         {/* Top Navbar (Sticky Frosted Glass) */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-8 py-4.5 flex items-center justify-between shadow-sm sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <LayoutDashboard className="h-5 w-5 text-teal-sedang md:hidden animate-pulse" />
-            <h1 className="text-base font-black text-slate-850 uppercase tracking-wider font-sans">
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 md:px-8 md:py-4.5 flex items-center justify-between shadow-sm sticky top-0 z-20">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            {/* Hamburger Menu Button - Mobile Only */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-1.5 -ml-1 rounded-lg hover:bg-slate-100 text-slate-600 transition shrink-0"
+              aria-label="Buka menu navigasi"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="text-xs md:text-base font-black text-slate-850 uppercase tracking-wider font-sans truncate">
               {currentTab === 'dashboard' && 'Beranda Analitik KKN'}
               {currentTab === 'sticky-notes' && 'Siklus 1: Rembug Warga'}
               {currentTab === 'siklus-2' && 'Siklus 2: Sensus & Pemetaan GIS'}
@@ -342,7 +371,7 @@ function DashboardSPA() {
               {currentTab === 'profile' && 'Profil & Pengaturan Platform'}
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
             {currentTab === 'dashboard' && (
               <a
                 href="/api/reports/excel"
@@ -351,15 +380,15 @@ function DashboardSPA() {
                 <FileSpreadsheet className="h-4 w-4" /> Unduh Laporan Excel
               </a>
             )}
-            <span className="text-[10px] font-black text-slate-500 bg-slate-100/80 border border-slate-200 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 uppercase tracking-wide">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-              Koneksi Online
+            <span className="text-[9px] md:text-[10px] font-black text-slate-500 bg-slate-100/80 border border-slate-200 px-2 py-1 md:px-3.5 md:py-1.5 rounded-full flex items-center gap-1 md:gap-1.5 uppercase tracking-wide">
+              <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+              <span className="hidden sm:inline">Koneksi</span> Online
             </span>
           </div>
         </header>
 
         {/* Dynamic Inner Views */}
-        <div className="p-8 max-w-[1400px] w-full mx-auto flex-1">
+        <div className="p-4 md:p-8 max-w-[1400px] w-full mx-auto flex-1">
           {currentTab === 'dashboard' && (
             <DashboardView
               switchTab={switchTab}
@@ -625,7 +654,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
       {/* LEFT COLUMN: Main Reports (col-span-2) */}
       <div className="lg:col-span-2 space-y-6">
         {/* Welcome banner (Premium Gradient) */}
@@ -716,7 +745,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
           </div>
 
           {/* Live Filter Metrics Counters with colored left-borders */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/60 border-l-4 border-teal-sedang text-center">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">KK Terdata</span>
               <span className="text-xl font-extrabold text-slate-800 block mt-1">{totalKK}</span>
@@ -744,7 +773,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
           </div>
 
           {/* Breakdown Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 pt-4 border-t border-slate-100">
             {/* 1. Status Rumah */}
             <div className="space-y-3">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Status Kepemilikan Rumah</span>
@@ -854,14 +883,14 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
                 </div>
 
                 {/* Weekday Labels */}
-                <div className="grid grid-cols-7 gap-1 text-center font-bold text-[9px] text-slate-400 uppercase mb-2">
-                  {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(d => (
+                <div className="grid grid-cols-7 gap-0.5 md:gap-1 text-center font-bold text-[8px] md:text-[9px] text-slate-400 uppercase mb-2">
+                  {['Mi', 'Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb'].map(d => (
                     <div key={d} className="py-1">{d}</div>
                   ))}
                 </div>
 
                 {/* Days Grid */}
-                <div className="grid grid-cols-7 gap-1.5 flex-1 select-none">
+                <div className="grid grid-cols-7 gap-1 md:gap-1.5 flex-1 select-none">
                   {getDaysInMonth(currentCalendarDate).map((day, idx) => {
                     if (!day) return <div key={`empty-${idx}`} className="bg-transparent border border-transparent rounded-lg"></div>;
                     
@@ -873,7 +902,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
                       <div 
                         key={day.toISOString()}
                         onClick={() => setSelectedCalendarDay(isSelected ? null : day)}
-                        className={`p-1.5 border rounded-lg flex flex-col justify-between items-center cursor-pointer transition relative group h-12 hover:shadow-xs ${
+                        className={`p-1 md:p-1.5 border rounded-lg flex flex-col justify-between items-center cursor-pointer transition relative group h-10 md:h-12 min-w-0 hover:shadow-xs ${
                           isSelected 
                             ? 'bg-emerald-600 border-emerald-700 text-white font-bold' 
                             : isToday 
@@ -1678,26 +1707,26 @@ function StickyNotesView() {
               <option value="RT 03 / RW 03">RT 03 / RW 03</option>
             </select>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-4 md:col-span-4 mt-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 md:col-span-4 mt-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xxs font-semibold text-slate-500 uppercase mr-2">Warna:</span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {COLORS.map((c) => (
                   <button
                     key={c.value}
                     type="button"
                     onClick={() => setSelectedColor(c.value)}
                     style={{ backgroundColor: c.value, border: selectedColor === c.value ? '2px solid #4F46E5' : '1px solid #CBD5E1' }}
-                    className="h-6 w-14 rounded text-[10px] font-bold uppercase transition"
+                    className="h-6 px-2.5 rounded text-[10px] font-bold uppercase transition"
                   >
-                    <span style={{ color: c.text }}>{c.name[0]}</span>
+                    <span style={{ color: c.text }}>{c.name}</span>
                   </button>
                 ))}
               </div>
             </div>
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-lg bg-teal-sedang px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-kabut transition"
+              className="flex items-center gap-2 rounded-lg bg-teal-sedang px-5 py-2 text-xs font-semibold text-white shadow hover:bg-kabut transition w-full sm:w-auto justify-center"
             >
               <Plus className="h-3.5 w-3.5" /> Tempel Note
             </button>
@@ -1930,11 +1959,11 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
                   <p className="text-slate-450 italic">GPS belum melakukan capture. Klik tombol di bawah.</p>
                 )}
               </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={handleGetGPS} className="rounded bg-teal-sedang hover:bg-kabut text-white text-xxs font-bold px-3 py-2 transition">
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={handleGetGPS} className="rounded bg-teal-sedang hover:bg-kabut text-white text-xxs font-bold px-3 py-2 transition flex-1 sm:flex-none">
                   {gpsLoading ? 'Mencari Satelit...' : 'Ambil GPS Otomatis'}
                 </button>
-                <button type="button" onClick={() => { setManualGps(!manualGps); if(!latitude) { setLatitude(-6.7275); setLongitude(107.3789); } }} className="rounded border border-slate-300 text-slate-700 text-xxs font-bold px-3 py-2 hover:bg-slate-100 transition">
+                <button type="button" onClick={() => { setManualGps(!manualGps); if(!latitude) { setLatitude(-6.7275); setLongitude(107.3789); } }} className="rounded border border-slate-300 text-slate-700 text-xxs font-bold px-3 py-2 hover:bg-slate-100 transition flex-1 sm:flex-none">
                   {manualGps ? 'Kunci Input Manual' : 'Input Manual'}
                 </button>
               </div>
@@ -1959,7 +1988,7 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
                   <button type="button" onClick={() => setPhotoBase64('')} className="absolute -top-2 -right-2 bg-red-650 text-white rounded-full p-1 text-xxs font-bold">Hapus</button>
                 </div>
               ) : (
-                <label className="cursor-pointer bg-teal-sedang text-white text-xxs font-bold px-4 py-2.5 rounded-lg inline-block shadow hover:bg-kabut transition">
+                <label className="cursor-pointer bg-teal-sedang text-white text-xxs font-bold px-4 py-2.5 rounded-lg inline-block shadow hover:bg-kabut transition w-full sm:w-auto text-center">
                   {photoLoading ? 'Menyusutkan Ukuran...' : 'Buka Kamera / Upload'}
                   <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" />
                 </label>
@@ -2038,9 +2067,9 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
 
           {/* Dynamic Problems Input */}
           <div className="space-y-3 border-b border-slate-100 pb-4">
-            <span className="text-xxs font-extrabold text-slate-450 uppercase tracking-wider block">Keluhan / Masalah Teridentifikasi (Siklus 2)</span>
-            <div className="flex gap-2">
-              <select value={newProbCat} onChange={(e) => setNewProbCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+            <span className="text-xxs font-extrabold text-slate-455 uppercase tracking-wider block">Keluhan / Masalah Teridentifikasi (Siklus 2)</span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select value={newProbCat} onChange={(e) => setNewProbCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-bold sm:w-40 shrink-0">
                 <option value="Infrastruktur">Infrastruktur</option>
                 <option value="Kesehatan">Kesehatan</option>
                 <option value="Ekonomi">Ekonomi</option>
@@ -2048,8 +2077,8 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
                 <option value="Pendidikan">Pendidikan</option>
                 <option value="Sosial-Budaya">Sosial-Budaya</option>
               </select>
-              <input type="text" value={newProbDesc} onChange={(e) => setNewProbDesc(e.target.value)} placeholder="Tulis keluhan spesifik rumah tangga..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-1 text-xs" />
-              <button type="button" onClick={addProblem} className="rounded bg-teal-sedang text-white px-3 py-1 text-xs font-bold hover:bg-kabut transition">Tambah</button>
+              <input type="text" value={newProbDesc} onChange={(e) => setNewProbDesc(e.target.value)} placeholder="Tulis keluhan spesifik rumah tangga..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs" />
+              <button type="button" onClick={addProblem} className="rounded bg-teal-sedang text-white px-5 py-2 text-xs font-bold hover:bg-kabut transition w-full sm:w-auto">Tambah</button>
             </div>
             {problems.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
@@ -2065,17 +2094,17 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
 
           {/* Dynamic Potentials Input */}
           <div className="space-y-3">
-            <span className="text-xxs font-extrabold text-slate-450 uppercase tracking-wider block">Potensi Teridentifikasi (Siklus 2)</span>
-            <div className="flex gap-2">
-              <select value={newPotCat} onChange={(e) => setNewPotCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+            <span className="text-xxs font-extrabold text-slate-455 uppercase tracking-wider block">Potensi Teridentifikasi (Siklus 2)</span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select value={newPotCat} onChange={(e) => setNewPotCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-bold sm:w-40 shrink-0">
                 <option value="Pertanian">Pertanian</option>
                 <option value="Peternakan">Peternakan</option>
                 <option value="Usaha Mikro/UMKM">Usaha Mikro/UMKM</option>
                 <option value="Keterampilan Khusus">Keterampilan Khusus</option>
                 <option value="Lahan Kosong">Lahan Kosong</option>
               </select>
-              <input type="text" value={newPotDesc} onChange={(e) => setNewPotDesc(e.target.value)} placeholder="Tulis potensi spesifik rumah tangga..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-1 text-xs" />
-              <button type="button" onClick={addPotential} className="rounded bg-teal-sedang text-white px-3 py-1 text-xs font-bold hover:bg-kabut transition">Tambah</button>
+              <input type="text" value={newPotDesc} onChange={(e) => setNewPotDesc(e.target.value)} placeholder="Tulis potensi spesifik rumah tangga..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs" />
+              <button type="button" onClick={addPotential} className="rounded bg-teal-sedang text-white px-5 py-2 text-xs font-bold hover:bg-kabut transition w-full sm:w-auto">Tambah</button>
             </div>
             {potentials.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
@@ -2105,7 +2134,7 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
 function MapView() {
   return (
     <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-4">
-      <h3 className="font-bold text-slate-800 text-sm">Distribusi Peta Spasar (Desa Sukahaji)</h3>
+      <h3 className="font-bold text-slate-800 text-sm">Distribusi Peta Spasial (Desa Sukahaji)</h3>
       <MapComponent />
     </div>
   );
@@ -2240,13 +2269,13 @@ function LogbookView({ currentUser }: { currentUser: any }) {
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 md:p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">Buku Catatan Harian (Logbook KKN Digital)</h2>
             <p className="text-[10px] text-slate-450 mt-0.5">Pendokumentasian mandiri aktivitas harian mahasiswa KKN Sisdamas.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
             {/* Member switcher for Admin/DPL/Master account */}
             {currentUser?.email === 'surveyor@sukahaji-official.id' && (
               <div className="flex items-center gap-2">
@@ -2294,10 +2323,10 @@ function LogbookView({ currentUser }: { currentUser: any }) {
       </div>
 
       {/* Date Picker & Active Logbook Form */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 md:p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black text-slate-400 uppercase">Pilih Tanggal:</span>
                 <input
@@ -2307,16 +2336,16 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                   className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 text-xs outline-none focus:border-teal-sedang transition font-bold"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   onClick={handleDeleteDayLogbook}
-                  className="rounded-xl bg-red-650 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 cursor-pointer shadow-sm transition"
+                  className="rounded-xl bg-red-650 hover:bg-red-700 text-white text-[10px] md:text-xs font-bold px-3 md:px-4 py-2 cursor-pointer shadow-sm transition flex-1 sm:flex-none"
                 >
                   Hapus Hari Ini
                 </button>
                 <button
                   onClick={handleSaveLogbook}
-                  className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-xs font-bold px-5 py-2 cursor-pointer shadow-sm transition"
+                  className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-[10px] md:text-xs font-bold px-3 md:px-5 py-2 cursor-pointer shadow-sm transition flex-1 sm:flex-none"
                 >
                   {success ? '✓ Berhasil Disimpan' : 'Simpan Logbook'}
                 </button>
@@ -2328,19 +2357,19 @@ function LogbookView({ currentUser }: { currentUser: any }) {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                    <th className="px-4 py-2 text-center w-12">No</th>
-                    <th className="px-4 py-2">Uraian Kegiatan</th>
-                    <th className="px-4 py-2">Output Kegiatan</th>
-                    <th className="px-4 py-2 text-center">Foto Bukti</th>
-                    <th className="px-4 py-2 text-center w-12"></th>
+                    <th className="px-2 md:px-4 py-2 text-center w-8 md:w-12">No</th>
+                    <th className="px-2 md:px-4 py-2 min-w-[120px]">Uraian Kegiatan</th>
+                    <th className="px-2 md:px-4 py-2 min-w-[120px]">Output Kegiatan</th>
+                    <th className="px-2 md:px-4 py-2 text-center">Foto</th>
+                    <th className="px-2 md:px-4 py-2 text-center w-8 md:w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150 text-xs">
                   {activities.map((act, index) => (
                     <tr key={act.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 text-center font-bold text-slate-400">{index + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-700">{act.kegiatan}</td>
-                      <td className="px-4 py-3 text-slate-600">{act.output}</td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-center font-bold text-slate-400">{index + 1}</td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-slate-700">{act.kegiatan}</td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-slate-600">{act.output}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 text-xxs font-bold">
                           {act.bukti_foto_url.startsWith('data:image') ? '📷 Foto Terlampir' : act.bukti_foto_url}
@@ -2368,7 +2397,7 @@ function LogbookView({ currentUser }: { currentUser: any }) {
             </div>
 
             {/* Quick add activity line row */}
-            <div className="bg-slate-50/70 border border-slate-200/60 p-4 rounded-xl space-y-3 pt-3">
+            <div className="bg-slate-50/70 border border-slate-200/60 p-3 md:p-4 rounded-xl space-y-3 pt-3">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block border-b border-slate-150 pb-1.5">
                 ➕ Tambah Uraian Kegiatan Baru
               </span>
@@ -2819,39 +2848,58 @@ function PriorityView() {
 
   return (
     <div className="space-y-6">
-      {/* Method selector toggle */}
-      <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
-        <div>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">
-            Siklus 3: Klasifikasi & Prioritas Pokok Masalah
-          </h2>
-          <p className="text-[10px] text-slate-455 mt-0.5">
-            Pilihlah metode prioritas yang ingin digunakan di bawah ini untuk menilai pokok masalah desa.
-          </p>
+      {/* Method selector toggle + Add Problem Form */}
+      <div className="flex flex-col gap-3 bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div>
+            <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+              Siklus 3: Klasifikasi & Prioritas Pokok Masalah
+            </h2>
+            <p className="text-[10px] text-slate-455 mt-0.5">
+              Pilihlah metode prioritas yang ingin digunakan di bawah ini untuk menilai pokok masalah desa.
+            </p>
+          </div>
+          <div className="flex gap-2 bg-slate-200/60 p-1 rounded-xl self-start sm:self-auto">
+            <button
+              onClick={() => setMethod('usg')}
+              className={`px-3 md:px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                method === 'usg' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Metode USG
+            </button>
+            <button
+              onClick={() => setMethod('abcd')}
+              className={`px-3 md:px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                method === 'abcd' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Metode ABCD (KKN)
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2 bg-slate-200/60 p-1 rounded-xl">
-          <button
-            onClick={() => setMethod('usg')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              method === 'usg' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Metode USG
-          </button>
-          <button
-            onClick={() => setMethod('abcd')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              method === 'abcd' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Metode ABCD (KKN)
-          </button>
-        </div>
+
+        {/* Add Problem Form */}
+        <form onSubmit={handleAddProblem} className="flex flex-col sm:flex-row gap-2 mt-2 pt-3 border-t border-slate-200/50">
+          <input 
+            type="text" 
+            value={newProbText} 
+            onChange={(e) => setNewProbText(e.target.value)}
+            placeholder="Tambah pokok masalah baru..." 
+            className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang"
+          />
+          <div className="flex gap-2">
+            <select value={newProbRt} onChange={(e) => setNewProbRt(e.target.value)} className="px-2 py-2 text-xs border border-slate-300 rounded-lg">
+              {['RT 01 / RW 01', 'RT 02 / RW 01', 'RT 03 / RW 01', 'RT 04 / RW 01'].map(rt => <option key={rt} value={rt}>{rt}</option>)}
+            </select>
+            <button type="submit" className="bg-teal-sedang text-white px-4 py-2 text-xs font-bold rounded-lg hover:bg-teal-tua transition">Tambah</button>
+          </div>
+        </form>
       </div>
 
       {method === 'usg' ? (
-        <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="bg-white rounded-xl border border-slate-300/60 p-4 md:p-6 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h3 className="font-bold text-slate-800 text-sm">Matriks Skoring Prioritas Kerja (USG)</h3>
               <p className="text-xxs text-slate-455 mt-0.5">Urgency (U), Seriousness (S), Growth (G). Rentang nilai 1-5.</p>
@@ -2868,35 +2916,35 @@ function PriorityView() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
-                  <th className="px-4 py-3 text-center">Rank</th>
-                  <th className="px-4 py-3">Deskripsi Pokok Masalah</th>
-                  <th className="px-4 py-3 text-center">Urgency</th>
-                  <th className="px-4 py-3 text-center">Seriousness</th>
-                  <th className="px-4 py-3 text-center">Growth</th>
-                  <th className="px-4 py-3 text-center">Total</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-center">Rank</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 min-w-[140px]">Deskripsi Pokok Masalah</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-center">U</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-center">S</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-center">G</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-center">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
                 {sortedUSGItems.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-center font-bold text-teal-tua">{item.rank}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-800">{item.problem_text} <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold">{item.rt_label}</span></td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-center font-bold text-teal-tua">{item.rank}</td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-slate-800">{item.problem_text} <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold">{item.rt_label}</span></td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-center">
                       <select value={item.urgency} onChange={(e) => handleScoreUSG(item.id, 'urgency', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
                         {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-center">
                       <select value={item.seriousness} onChange={(e) => handleScoreUSG(item.id, 'seriousness', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
                         {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-center">
                       <select value={item.growth} onChange={(e) => handleScoreUSG(item.id, 'growth', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
                         {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-center font-extrabold text-teal-sedang">{item.total_score}</td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-center font-extrabold text-teal-sedang">{item.total_score}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2906,15 +2954,15 @@ function PriorityView() {
       ) : (
         <div className="space-y-6">
           {/* TABEL 1: Skoring ABCD */}
-          <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="bg-white rounded-xl border border-slate-300/60 p-4 md:p-6 shadow-sm space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <h3 className="font-bold text-slate-800 text-sm">TABEL 1. Penentuan Pokok Masalah (Skoring Prioritas ABCD)</h3>
                 <p className="text-xxs text-slate-455 mt-0.5">Berikan nilai 1-5 pada masing-masing kriteria. Jumlah skor = A + B + C + D.</p>
               </div>
               <button
                 onClick={handleSaveAll}
-                className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white font-bold px-5 py-2 text-xs transition cursor-pointer shadow-sm"
+                className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white font-bold px-5 py-2 text-xs transition cursor-pointer shadow-sm self-start sm:self-auto"
               >
                 {success ? '✓ Tersimpan!' : 'Simpan Matrix'}
               </button>
@@ -2924,44 +2972,44 @@ function PriorityView() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
-                    <th className="px-4 py-3 text-center w-16">Peringkat</th>
-                    <th className="px-4 py-3">Pokok Masalah</th>
-                    <th className="px-3 py-3 text-center">Kriteria A</th>
-                    <th className="px-3 py-3 text-center">Kriteria B</th>
-                    <th className="px-3 py-3 text-center">Kriteria C</th>
-                    <th className="px-3 py-3 text-center">Kriteria D</th>
-                    <th className="px-4 py-3 text-center">Jumlah Skor</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center w-12 md:w-16">Peringkat</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 min-w-[140px]">Pokok Masalah</th>
+                    <th className="px-2 py-2 md:py-3 text-center min-w-[65px]"><span className="hidden md:inline">Kriteria </span>A</th>
+                    <th className="px-2 py-2 md:py-3 text-center min-w-[65px]"><span className="hidden md:inline">Kriteria </span>B</th>
+                    <th className="px-2 py-2 md:py-3 text-center min-w-[65px]"><span className="hidden md:inline">Kriteria </span>C</th>
+                    <th className="px-2 py-2 md:py-3 text-center min-w-[65px]"><span className="hidden md:inline">Kriteria </span>D</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-center min-w-[70px]">Jumlah Skor</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
                   {sortedABCDItems.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-center font-bold text-teal-tua">{item.rank_abcd || 1}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-855">
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-center font-bold text-teal-tua">{item.rank_abcd || 1}</td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-slate-855">
                         {item.problem_text}
                         <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold">{item.rt_label}</span>
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        <select value={item.a_score || 3} onChange={(e) => handleScoreABCD(item.id, 'a_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                      <td className="px-1 md:px-3 py-2 text-center">
+                        <select value={item.a_score || 3} onChange={(e) => handleScoreABCD(item.id, 'a_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-1.5 py-1 text-xs">
                           {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        <select value={item.b_score || 3} onChange={(e) => handleScoreABCD(item.id, 'b_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                      <td className="px-1 md:px-3 py-2 text-center">
+                        <select value={item.b_score || 3} onChange={(e) => handleScoreABCD(item.id, 'b_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-1.5 py-1 text-xs">
                           {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        <select value={item.c_score || 3} onChange={(e) => handleScoreABCD(item.id, 'c_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                      <td className="px-1 md:px-3 py-2 text-center">
+                        <select value={item.c_score || 3} onChange={(e) => handleScoreABCD(item.id, 'c_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-1.5 py-1 text-xs">
                           {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        <select value={item.d_score || 3} onChange={(e) => handleScoreABCD(item.id, 'd_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                      <td className="px-1 md:px-3 py-2 text-center">
+                        <select value={item.d_score || 3} onChange={(e) => handleScoreABCD(item.id, 'd_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-1.5 py-1 text-xs">
                           {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-center font-extrabold text-teal-sedang">{item.total_score_abcd || 12}</td>
+                      <td className="px-2 md:px-4 py-2 md:py-3 text-center font-extrabold text-teal-sedang">{item.total_score_abcd || 12}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2969,7 +3017,7 @@ function PriorityView() {
             </div>
 
             {/* Info Kriteria Penjelasan */}
-            <div className="bg-slate-50 border border-slate-200/50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-4 gap-4 text-xxs font-semibold">
+            <div className="bg-slate-50 border border-slate-200/50 p-4 rounded-xl grid grid-cols-2 md:grid-cols-4 gap-4 text-xxs font-semibold">
               <div className="space-y-1">
                 <span className="font-bold text-teal-tua uppercase">Kriteria A</span>
                 <p className="text-slate-500">Menimbulkan masalah lain bila tidak diselesaikan.</p>
@@ -2990,7 +3038,7 @@ function PriorityView() {
           </div>
 
           {/* TABEL 2: Alternatif Penyelesaian */}
-          <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
+          <div className="bg-white rounded-xl border border-slate-300/60 p-4 md:p-6 shadow-sm space-y-4 md:space-y-6">
             <div>
               <h3 className="font-bold text-slate-800 text-sm">TABEL 2. Alternatif Penyelesaian Masalah</h3>
               <p className="text-xxs text-slate-455 mt-0.5">Uraikan potensi dan alternatif solusi berdasarkan urutan masalah prioritas (Tabel 1).</p>
@@ -3000,23 +3048,23 @@ function PriorityView() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
-                    <th className="px-3 py-3 w-16 text-center">Rank</th>
-                    <th className="px-3 py-3 w-1/4">Pokok Masalah (Prioritas)</th>
-                    <th className="px-3 py-3">Uraian Potensi Penyelesaian</th>
-                    <th className="px-3 py-3">1. Mandiri (Swadaya Warga)</th>
-                    <th className="px-3 py-3">2. Dukungan Luar (Semi-Mandiri)</th>
-                    <th className="px-3 py-3">3. Memerlukan Bantuan Luar</th>
+                    <th className="px-2 md:px-3 py-2 md:py-3 w-10 md:w-16 text-center">Rank</th>
+                    <th className="px-2 md:px-3 py-2 md:py-3 min-w-[140px] w-1/4">Pokok Masalah (Prioritas)</th>
+                    <th className="px-2 md:px-3 py-2 md:py-3 min-w-[150px]">Uraian Potensi Penyelesaian</th>
+                    <th className="px-2 md:px-3 py-2 md:py-3 min-w-[150px]">1. Mandiri (Swadaya Warga)</th>
+                    <th className="px-2 md:px-3 py-2 md:py-3 min-w-[150px]">2. Dukungan Luar (Semi-Mandiri)</th>
+                    <th className="px-2 md:px-3 py-2 md:py-3 min-w-[150px]">3. Memerlukan Bantuan Luar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
                   {sortedABCDItems.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="px-3 py-3 text-center font-bold text-teal-tua">{item.rank_abcd || 1}</td>
-                      <td className="px-3 py-3 font-semibold text-slate-800">
+                      <td className="px-2 md:px-3 py-2 md:py-3 text-center font-bold text-teal-tua">{item.rank_abcd || 1}</td>
+                      <td className="px-2 md:px-3 py-2 md:py-3 font-semibold text-slate-800">
                         {item.problem_text}
                         <p className="text-[9px] text-slate-400 font-bold mt-0.5">{item.rt_label}</p>
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-1 md:px-2 py-1.5">
                         <textarea
                           rows={2}
                           value={item.potensi_uraian || ''}
@@ -3025,7 +3073,7 @@ function PriorityView() {
                           className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
                         />
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-1 md:px-2 py-1.5">
                         <textarea
                           rows={2}
                           value={item.alt_mandiri || ''}
@@ -3034,7 +3082,7 @@ function PriorityView() {
                           className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
                         />
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-1 md:px-2 py-1.5">
                         <textarea
                           rows={2}
                           value={item.alt_dukungan_luar || ''}
@@ -3043,7 +3091,7 @@ function PriorityView() {
                           className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
                         />
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-1 md:px-2 py-1.5">
                         <textarea
                           rows={2}
                           value={item.alt_bantuan_luar || ''}
