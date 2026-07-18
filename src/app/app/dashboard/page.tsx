@@ -1217,7 +1217,7 @@ function Siklus4View() {
   // Load programs & priority problems from localStorage
   useEffect(() => {
     // Priority Problems
-    const savedProblems = localStorage.getItem('sukahaji_priority_items');
+    const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
     if (savedProblems) {
       const parsed = JSON.parse(savedProblems);
       setPriorityProblems(parsed);
@@ -1229,7 +1229,7 @@ function Siklus4View() {
     }
 
     // Programs
-    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs');
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
     if (savedProgs) {
       setPrograms(JSON.parse(savedProgs));
       const defaultProgs: any[] = [];
@@ -1259,7 +1259,7 @@ function Siklus4View() {
 
     const updated = [newProg, ...programs];
     setPrograms(updated);
-    localStorage.setItem('sukahaji_siklus4_programs', JSON.stringify(updated));
+    localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
 
     // Clear form
     setNewName('');
@@ -1278,7 +1278,7 @@ function Siklus4View() {
   const deleteProgram = (id: string) => {
     const updated = programs.filter(p => p.id !== id);
     setPrograms(updated);
-    localStorage.setItem('sukahaji_siklus4_programs', JSON.stringify(updated));
+    localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
   };
 
   const toggleExpand = (id: string) => {
@@ -2687,7 +2687,7 @@ function PriorityView() {
 
   // Load items from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('sukahaji_priority_items');
+    const saved = localStorage.getItem('sukahaji_priority_items_v3');
     if (saved) {
       setItems(JSON.parse(saved));
     } else {
@@ -2718,7 +2718,7 @@ function PriorityView() {
         ...item,
         rank: sorted.findIndex((s) => s.id === item.id) + 1
       }));
-      localStorage.setItem('sukahaji_priority_items', JSON.stringify(reranked));
+      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(reranked));
       return reranked;
     });
   };
@@ -2748,7 +2748,7 @@ function PriorityView() {
         ...item,
         rank_abcd: sorted.findIndex((s) => s.id === item.id) + 1
       }));
-      localStorage.setItem('sukahaji_priority_items', JSON.stringify(reranked));
+      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(reranked));
       return reranked;
     });
   };
@@ -2761,7 +2761,7 @@ function PriorityView() {
         }
         return item;
       });
-      localStorage.setItem('sukahaji_priority_items', JSON.stringify(updated));
+      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(updated));
       return updated;
     });
   };
@@ -2801,7 +2801,7 @@ function PriorityView() {
         rank: sortedUSG.findIndex((s) => s.id === item.id) + 1,
         rank_abcd: sortedABCD.findIndex((s) => s.id === item.id) + 1
       }));
-      localStorage.setItem('sukahaji_priority_items', JSON.stringify(finalized));
+      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(finalized));
       return finalized;
     });
 
@@ -2809,7 +2809,7 @@ function PriorityView() {
   };
 
   const handleSaveAll = () => {
-    localStorage.setItem('sukahaji_priority_items', JSON.stringify(items));
+    localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(items));
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2000);
   };
