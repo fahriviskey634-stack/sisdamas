@@ -56,6 +56,19 @@ async function prepareForEmbed(photoUrl: string): Promise<Buffer> {
   }
 }
 
+function parsePhotos(photoUrlStr: string): string[] {
+  if (!photoUrlStr) return [];
+  const trimmed = photoUrlStr.trim();
+  if (trimmed.startsWith('[')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return [trimmed];
+    }
+  }
+  return [trimmed];
+}
+
 /**
  * Builds the DOCX buffer for a single member's logbook.
  * Shared by both format=docx and format=pdf (which now just serves the DOCX).
@@ -146,7 +159,34 @@ async function buildLogbookDocx(member: typeof KKN_MEMBERS[0], entries: any[]): 
 
     const acts = entry.logbook_activity || [];
     for (const act of acts) {
-      const imgBuffer = await prepareForEmbed(act.bukti_foto_url);
+      const photos = parsePhotos(act.bukti_foto_url);
+      const imgRuns: docx.ImageRun[] = [];
+
+      for (const photoUrl of photos) {
+        try {
+          const imgBuffer = await prepareForEmbed(photoUrl);
+          imgRuns.push(
+            new docx.ImageRun({
+              data: imgBuffer,
+              transformation: { width: 100, height: 75 },
+              type: "jpg"
+            })
+          );
+        } catch (err) {
+          console.error("Embed error for photo:", photoUrl, err);
+        }
+      }
+
+      if (imgRuns.length === 0) {
+        const fallbackBuffer = await prepareForEmbed('📷 default_foto.jpg');
+        imgRuns.push(
+          new docx.ImageRun({
+            data: fallbackBuffer,
+            transformation: { width: 100, height: 75 },
+            type: "jpg"
+          })
+        );
+      }
 
       tableRows.push(new docx.TableRow({
         children: [
@@ -159,13 +199,7 @@ async function buildLogbookDocx(member: typeof KKN_MEMBERS[0], entries: any[]): 
             children: [
               new docx.Paragraph({
                 alignment: docx.AlignmentType.CENTER,
-                children: [
-                  new docx.ImageRun({
-                    data: imgBuffer,
-                    transformation: { width: 100, height: 75 },
-                    type: "jpg"
-                  })
-                ]
+                children: imgRuns
               })
             ]
           })

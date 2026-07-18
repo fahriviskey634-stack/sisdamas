@@ -5,7 +5,60 @@ import { getGoogleAccessToken } from '@/lib/googleAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 
-async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string): Promise<string> {
+const KKN_MEMBERS = [
+  { nim: '1234060108', name: 'Aisyah Shofa Aini', gender: 'P', prodi: 'S1 - Ilmu Komunikasi Humas', fakultas: 'Dakwah dan Komunikasi', email: 'aisyah@sukahaji-official.id', division: 'Sekretaris (BPH)' },
+  { nim: '1231030055', name: 'Arpan Maulana', gender: 'L', prodi: 'S1 - Ilmu Al-Qur\'an dan Tafsir', fakultas: 'Ushuluddin', email: 'arpan@sukahaji-official.id', division: 'Ketua (BPH)' },
+  { nim: '1237010003', name: 'Tifa Astrianti', gender: 'P', prodi: 'S1 - Matematika', fakultas: 'Sains dan Teknologi', email: 'tifa@sukahaji-official.id', division: 'Bendahara (BPH)' },
+  { nim: '1235060059', name: 'Hani Husnul Nuwat', gender: 'P', prodi: 'S1 - Ilmu Perpustakaan dan Informasi Islam', fakultas: 'Adab dan Humaniora', email: 'hani@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232040021', name: 'Indah Sri Rahayu', gender: 'P', prodi: 'S1 - Pendidikan Bahasa Inggris', fakultas: 'Tarbiyah dan Keguruan', email: 'indah@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232050026', name: 'Hasna Khairinisa Asy Syifa', gender: 'P', prodi: 'S1 - Pendidikan Matematika', fakultas: 'Tarbiyah dan Keguruan', email: 'hasna@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1238010111', name: 'Ilya Hanifah Hakim', gender: 'P', prodi: 'S1 - Administrasi Publik', fakultas: 'Ilmu Sosial dan Ilmu Politik', email: 'ilya@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239230099', name: 'Evan Fadhil Al Akbar', gender: 'L', prodi: 'S1 - Manajemen Keuangan Syariah', fakultas: 'Ekonomi dan Bisnis Islam', email: 'evan@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1235020162', name: 'Hilya Izza Fitriani', gender: 'P', prodi: 'S1 - Bahasa dan Sastra Arab', fakultas: 'Adab dan Humaniora', email: 'hilya@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239240038', name: 'Kayyis Yasra Ismaya', gender: 'P', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'kayyis@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1237030018', name: 'Fahry Rizky Samsudin', gender: 'L', prodi: 'S1 - Fisika', fakultas: 'Sains dan Teknologi', email: 'fahri@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1236000005', name: 'Nova Aulia Rahmawan', gender: 'P', prodi: 'S1 - Psikologi', fakultas: 'Psikologi', email: 'nova@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1232090080', name: 'Nurdin', gender: 'L', prodi: 'S1 - Pendidikan Guru Madrasah Ibtidaiyah', fakultas: 'Tarbiyah dan Keguruan', email: 'nurdin@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1231040133', name: 'Hanifah Mauludiah', gender: 'P', prodi: 'S1 - Tasawuf dan Psikoterapi', fakultas: 'Ushuluddin', email: 'hanifah@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1239240280', name: 'Ridwan Firmansyah', gender: 'L', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'ridwan@sukahaji-official.id', division: 'Divisi Logsum' }
+];
+
+async function getOrCreateFolder(name: string, parentId: string, token: string): Promise<string> {
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.folder'+and+name='${encodeURIComponent(name)}'+and+'${parentId}'+in+parents+and+trashed=false&fields=files(id)`;
+  
+  const searchRes = await fetch(searchUrl, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  
+  if (searchRes.ok) {
+    const searchData = await searchRes.json();
+    if (searchData.files && searchData.files.length > 0) {
+      return searchData.files[0].id;
+    }
+  }
+
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentId]
+    })
+  });
+  
+  if (!createRes.ok) {
+    const err = await createRes.text();
+    throw new Error(`Failed to create folder ${name}: ${err}`);
+  }
+  const folder = await createRes.json();
+  return folder.id;
+}
+
+async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, surveyorId: string): Promise<string> {
   const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
@@ -15,17 +68,30 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string): 
   }
 
   try {
-    const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/drive.file']);
+    const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/drive']);
     const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '');
+
+    // Get or create root Dokumentasi folder inside target parent
+    const rootDokumentasiFolder = await getOrCreateFolder('Dokumentasi', driveFolderId, token);
+    
+    // Find surveyor name for folder mapping
+    const member = KKN_MEMBERS.find(m => m.nim === surveyorId);
+    const folderName = member ? member.name : `Surveyor_${surveyorId}`;
+    
+    // Get or create sub-folder under Dokumentasi
+    const targetFolderId = await getOrCreateFolder(folderName, rootDokumentasiFolder, token);
+
+    // Extract correct MIME type
+    const mimeType = photoBase64.split(';')[0].split(':')[1] || 'image/jpeg';
 
     const metadata = {
       name: filename,
-      mimeType: 'image/jpeg',
-      parents: [driveFolderId]
+      mimeType,
+      parents: [targetFolderId]
     };
 
     const boundary = 'foo_bar_photo_boundary';
-    const header = `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: image/jpeg\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
+    const header = `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
     const footer = `\r\n--${boundary}--`;
 
     const body = Buffer.concat([
@@ -50,12 +116,31 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string): 
     }
 
     const driveFile = await res.json();
-    return `https://drive.google.com/open?id=${driveFile.id}`;
+
+    // Set permission to anyone with link viewable
+    try {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${driveFile.id}/permissions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          role: 'reader',
+          type: 'anyone'
+        })
+      });
+    } catch (permErr) {
+      console.error("Failed to set permission on Drive file:", permErr);
+    }
+
+    return `https://docs.google.com/uc?export=download&id=${driveFile.id}`;
   } catch (err) {
     console.error("Failed to upload photo to Google Drive:", err);
     return `https://drive.google.com/open?id=fallback-error-${Date.now()}`;
   }
 }
+
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
 // Zod validation schema for coordinate boundaries
@@ -179,7 +264,11 @@ export async function POST(req: NextRequest) {
 
         // e. Auto-upload photo to Google Drive and save the drive reference url in Supabase
         if (photo_url) {
-          const driveUrl = await uploadPhotoToGoogleDrive(photo_url, `foto_rumah_${householdData.id}_${Date.now()}.jpg`);
+          const mimeType = photo_url.split(';')[0].split(':')[1] || 'image/jpeg';
+          const extension = mimeType.split('/')[1] || 'jpg';
+          const filename = `sensus_${rt_id}_${kk_name.replace(/\s+/g, '_')}_${Date.now()}.${extension}`;
+          const driveUrl = await uploadPhotoToGoogleDrive(photo_url, filename, surveyor_id);
+          
           await supabaseServer.from('household_photo').insert([
             {
               household_id: householdData.id,

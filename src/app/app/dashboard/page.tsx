@@ -401,7 +401,7 @@ function DashboardSPA() {
             />
           )}
           {currentTab === 'sticky-notes' && <StickyNotesView />}
-          {currentTab === 'siklus-2' && <Siklus2View updateDraftCount={updateDraftCount} />}
+          {currentTab === 'siklus-2' && <Siklus2View updateDraftCount={updateDraftCount} currentUser={currentUser} />}
           {currentTab === 'priority' && <PriorityView />}
           {currentTab === 'logbook' && <LogbookView currentUser={currentUser} />}
           {currentTab === 'siklus-4' && <Siklus4View />}
@@ -1181,7 +1181,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
 // -------------------------------------------------------------
 // SUB-VIEW 1.5: Siklus 2 View Component (Sensus & Pemetaan GIS Tabs)
 // -------------------------------------------------------------
-function Siklus2View({ updateDraftCount }: any) {
+function Siklus2View({ updateDraftCount, currentUser }: any) {
   const [subTab, setSubTab] = useState<'form' | 'map'>('form');
 
   return (
@@ -1209,7 +1209,7 @@ function Siklus2View({ updateDraftCount }: any) {
       </div>
 
       {subTab === 'form' ? (
-        <SurveyWizardView updateDraftCount={updateDraftCount} />
+        <SurveyWizardView updateDraftCount={updateDraftCount} currentUser={currentUser} />
       ) : (
         <MapView />
       )}
@@ -1766,7 +1766,7 @@ function StickyNotesView() {
 // -------------------------------------------------------------
 // SUB-VIEW 3: Survey Wizard View Component
 // -------------------------------------------------------------
-function SurveyWizardView({ switchTab, updateDraftCount }: any) {
+function SurveyWizardView({ switchTab, updateDraftCount, currentUser }: any) {
   const [wStep, setWStep] = useState(1);
   const [kkName, setKkName] = useState('');
   const [kkNumber, setKkNumber] = useState('');
@@ -1877,7 +1877,7 @@ function SurveyWizardView({ switchTab, updateDraftCount }: any) {
       problems,
       potentials,
       photo_url: photoBase64,
-      surveyor_id: 'mock-surveyor'
+      surveyor_id: currentUser?.nim || 'ADMIN56'
     };
 
     const existing = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
@@ -2175,7 +2175,7 @@ function LogbookView({ currentUser }: { currentUser: any }) {
   // Form states for new activity row
   const [kegiatanText, setKegiatanText] = useState('');
   const [outputText, setOutputText] = useState('');
-  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
   // Sync activeNim with currentUser
   useEffect(() => {
@@ -2212,12 +2212,12 @@ function LogbookView({ currentUser }: { currentUser: any }) {
       output: outputText.trim(),
       volume: 1,
       satuan: 'kali',
-      bukti_foto_url: photoPreview || '📷 default_foto.jpg'
+      bukti_foto_url: photoPreviews.length > 0 ? JSON.stringify(photoPreviews) : '📷 default_foto.jpg'
     };
     setActivities(prev => [...prev, newAct]);
     setKegiatanText('');
     setOutputText('');
-    setPhotoPreview('');
+    setPhotoPreviews([]);
   };
 
   const handleRemoveRow = (id: string) => {
@@ -2233,11 +2233,18 @@ function LogbookView({ currentUser }: { currentUser: any }) {
     setTimeout(() => setSuccess(false), 2000);
 
     try {
-      await fetch('/api/sync/logbook', {
+      const res = await fetch('/api/sync/logbook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nim: activeNim, logbookData: allLogs })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.updatedLogbookData) {
+          localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(data.updatedLogbookData));
+          setActivities(data.updatedLogbookData[selectedDate] || []);
+        }
+      }
     } catch (e) {
       console.warn("Background logbook sync failed, saved locally:", e);
     }
@@ -2372,7 +2379,19 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                       <td className="px-2 md:px-4 py-2 md:py-3 text-slate-600">{act.output}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 text-xxs font-bold">
-                          {act.bukti_foto_url.startsWith('data:image') ? '📷 Foto Terlampir' : act.bukti_foto_url}
+                          {act.bukti_foto_url.startsWith('[') ? (
+                            (() => {
+                              try {
+                                return `📷 ${JSON.parse(act.bukti_foto_url).length} Foto`;
+                              } catch {
+                                return '📷 Foto Terlampir';
+                              }
+                            })()
+                          ) : act.bukti_foto_url.startsWith('data:image') ? (
+                            '📷 1 Foto'
+                          ) : (
+                            act.bukti_foto_url
+                          )}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -2422,19 +2441,31 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                   <span className="text-[9px] font-bold text-slate-450 uppercase">Foto Bukti:</span>
                   <input
                     type="file"
+                    multiple
                     accept="image/*"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setPhotoPreview(reader.result as string);
-                        };
-                        reader.readAsDataURL(file);
+                      const files = e.target.files;
+                      if (files && files.length > 0) {
+                        const fileList = Array.from(files);
+                        const readPromises = fileList.map(file => {
+                          return new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(file);
+                          });
+                        });
+                        Promise.all(readPromises).then(results => {
+                          setPhotoPreviews(results);
+                        });
                       }
                     }}
                     className="text-xxs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xxs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
                   />
+                  {photoPreviews.length > 0 && (
+                    <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-150 font-bold animate-pulse">
+                      📎 {photoPreviews.length} File Terpilih
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
