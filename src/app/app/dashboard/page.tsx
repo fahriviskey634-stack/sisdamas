@@ -2559,50 +2559,24 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                   Cetak Browser
                 </button>
                 <a
-                  href={`/api/export/logbook?user_id=${activeNim}&start_date=${selectedDate}&end_date=${selectedDate}&format=pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
-                >
-                  Unduh PDF (Hari Ini)
-                </a>
-                <a
                   href={`/api/export/logbook?user_id=${activeNim}&start_date=${selectedDate}&end_date=${selectedDate}&format=docx`}
-                  className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
                 >
                   Unduh Word (Hari Ini)
                 </a>
                 <a
-                  href={`/api/export/logbook?user_id=${activeNim}&format=pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
-                >
-                  Unduh PDF (Semua)
-                </a>
-                <a
                   href={`/api/export/logbook?user_id=${activeNim}&format=docx`}
-                  className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                  className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
                 >
                   Unduh Word (Semua)
                 </a>
                 {activeNim === '1231030055' && (
-                  <>
-                    <a
-                      href={`/api/export/logbook-kelompok?format=pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
-                    >
-                      Unduh LPJ Gabungan (PDF)
-                    </a>
-                    <a
-                      href={`/api/export/logbook-kelompok?format=docx`}
-                      className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
-                    >
-                      Unduh LPJ Gabungan (Word)
-                    </a>
-                  </>
+                  <a
+                    href={`/api/export/logbook-kelompok?format=docx`}
+                    className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                  >
+                    Unduh LPJ Gabungan (Word)
+                  </a>
                 )}
                 <button
                   onClick={() => setShowPrintModal(false)}
@@ -2681,7 +2655,6 @@ function LogbookView({ currentUser }: { currentUser: any }) {
 
               {/* Identity List */}
               <div className="py-2 text-[11pt] text-black">
-                <div className="font-bold mb-2">1. Identitas Peserta</div>
                 <ol className="list-decimal pl-5 space-y-1">
                   <li><strong>Nama:</strong> {activeMember?.name || '-'}</li>
                   <li><strong>NIM / Prodi:</strong> {activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</li>
@@ -2693,7 +2666,6 @@ function LogbookView({ currentUser }: { currentUser: any }) {
 
               {/* Table Data list */}
               <div className="mt-4">
-                <div className="font-bold mb-2 text-[11pt] text-black">2. Entri Kegiatan</div>
                 <table className="w-full border-collapse border border-black text-[11pt] text-black">
                   <thead>
                     <tr style={{ backgroundColor: '#fff2cc' }}>
