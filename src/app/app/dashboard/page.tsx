@@ -203,9 +203,11 @@ function DashboardSPA() {
           {/* Logo & Branding Area */}
           <div className="p-6 border-b border-[#194A5B]/35 bg-[#071d26]/40">
             <div className="flex items-center gap-2.5">
-              <div className="h-8.5 w-8.5 rounded-xl bg-gradient-to-br from-[#194A5B] to-[#407F8F] flex items-center justify-center text-[#F6F1E6] font-bold text-sm shadow-md shadow-indigo-950/40">
-                K56
-              </div>
+              <img 
+                src="/logo.jpg" 
+                alt="Logo Kelompok 56" 
+                className="h-9 w-9 rounded-xl object-cover shadow-md border border-[#194A5B]/30"
+              />
               <div>
                 <h2 className="text-sm font-extrabold tracking-wider text-[#F6F1E6] uppercase">SISDAMAS 56</h2>
                 <p className="text-[9px] text-slate-400 font-semibold tracking-wide mt-0.5">Desa Sukahaji • Dusun 2</p>
@@ -2671,54 +2673,68 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                 }
               `}</style>
 
-              <div className="text-center space-y-1.5 pb-6 border-b-2 border-black">
-                <h2 className="text-md font-bold uppercase tracking-wider">BUKU CATATAN HARIAN (LOGBOOK)</h2>
-                <h2 className="text-sm font-bold uppercase tracking-wide">KULIAH KERJA NYATA (KKN) REGULER SISDAMAS</h2>
-                <h3 className="text-xs font-semibold">UIN SUNAN GUNUNG DJATI BANDUNG - TAHUN AKADEMIK 2025/2026</h3>
+              <div className="text-center pb-4">
+                <h1 className="text-md font-bold uppercase tracking-wider text-black m-0" style={{ fontSize: '14pt' }}>LOGBOOK KKN SISDAMAS</h1>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-black mt-1" style={{ fontSize: '12pt' }}>UIN SUNAN GUNUNG DJATI BANDUNG</h2>
+                <h3 className="text-xs font-bold text-black mt-1" style={{ fontSize: '11pt' }}>TAHUN AKADEMIK 2025/2026</h3>
               </div>
 
-              {/* Identity Form */}
-              <div className="grid grid-cols-2 gap-4 py-4 text-[12pt] border-b border-black text-black">
-                <div className="space-y-1">
-                  <p><strong>Nama Peserta:</strong> {activeMember?.name || '-'}</p>
-                  <p><strong>NIM / Prodi:</strong> {activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</p>
-                  <p><strong>Fakultas / Divisi:</strong> {activeMember?.fakultas || '-'} / {activeMember?.division || '-'}</p>
-                </div>
-                <div className="space-y-1 text-right md:text-left">
-                  <p><strong>Kelompok / Dusun:</strong> Kelompok 56 / Dusun 2</p>
-                  <p><strong>Desa / Kecamatan:</strong> Sukahaji / Cipeundeuy</p>
-                  <p><strong>Kabupaten / Provinsi:</strong> Bandung Barat / Jawa Barat</p>
-                </div>
+              {/* Identity List */}
+              <div className="py-2 text-[11pt] text-black">
+                <div className="font-bold mb-2">1. Identitas Peserta</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><strong>Nama:</strong> {activeMember?.name || '-'}</li>
+                  <li><strong>NIM / Prodi:</strong> {activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</li>
+                  <li><strong>Fakultas:</strong> {activeMember?.fakultas || '-'}</li>
+                  <li><strong>Kelompok:</strong> Kelompok 56</li>
+                  <li><strong>Lokasi:</strong> Dusun 2, Desa Sukahaji, Kecamatan Cipeundeuy, Kabupaten Bandung Barat, Provinsi Jawa Barat</li>
+                </ol>
               </div>
 
               {/* Table Data list */}
-              <div className="mt-6">
-                <h4 className="text-[12pt] font-bold uppercase tracking-wider mb-2 text-black">
-                  Entri Kegiatan Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                </h4>
-                <table className="w-full border-collapse border border-black text-[12pt] text-black">
+              <div className="mt-4">
+                <div className="font-bold mb-2 text-[11pt] text-black">2. Entri Kegiatan</div>
+                <table className="w-full border-collapse border border-black text-[11pt] text-black">
                   <thead>
-                    <tr className="bg-transparent">
-                      <th className="border border-black px-3 py-2 text-center w-12 font-bold">No</th>
-                      <th className="border border-black px-3 py-2 text-left font-bold">Uraian Aktivitas/Kegiatan</th>
-                      <th className="border border-black px-3 py-2 text-left font-bold">Output / Hasil Kegiatan</th>
-                      <th className="border border-black px-3 py-2 text-center w-16 font-bold">Volume</th>
-                      <th className="border border-black px-3 py-2 text-center w-20 font-bold">Satuan</th>
+                    <tr style={{ backgroundColor: '#fff2cc' }}>
+                      <th className="border border-black px-2 py-1 text-center w-12 font-bold">No</th>
+                      <th className="border border-black px-2 py-1 text-center w-28 font-bold">Tanggal</th>
+                      <th className="border border-black px-2 py-1 text-left font-bold">Kegiatan</th>
+                      <th className="border border-black px-2 py-1 text-left font-bold">Output</th>
+                      <th className="border border-black px-2 py-1 text-center w-20 font-bold">Bukti Foto</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {activities.map((act, idx) => (
-                      <tr key={act.id}>
-                        <td className="border border-black px-3 py-2 text-center font-bold">{idx + 1}</td>
-                        <td className="border border-black px-3 py-2">{act.kegiatan}</td>
-                        <td className="border border-black px-3 py-2">{act.output}</td>
-                        <td className="border border-black px-3 py-2 text-center font-bold">{act.volume}</td>
-                        <td className="border border-black px-3 py-2 text-center">{act.satuan}</td>
-                      </tr>
-                    ))}
+                    {activities.map((act, idx) => {
+                      const d = new Date(selectedDate);
+                      const day = String(d.getDate()).padStart(2, '0');
+                      const month = String(d.getMonth() + 1).padStart(2, '0');
+                      const year = d.getFullYear();
+                      const dateFormatted = `${day}/${month}/${year}`;
+
+                      return (
+                        <tr key={act.id}>
+                          <td className="border border-black px-2 py-1 text-center font-bold">{idx + 1}</td>
+                          <td className="border border-black px-2 py-1 text-center">{dateFormatted}</td>
+                          <td className="border border-black px-2 py-1">{act.kegiatan}</td>
+                          <td className="border border-black px-2 py-1">{act.output}</td>
+                          <td className="border border-black px-2 py-1 text-center">
+                            {act.bukti_foto_url ? (
+                              <img
+                                src={act.bukti_foto_url}
+                                alt="Bukti"
+                                className="w-12 h-12 object-cover mx-auto block"
+                              />
+                            ) : (
+                              <span className="text-[9pt] text-slate-400">Tidak ada foto</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {activities.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="border border-black px-3 py-6 text-center italic text-black">
+                        <td colSpan={5} className="border border-black px-2 py-4 text-center italic text-black">
                           Tidak ada data kegiatan KKN untuk tanggal ini.
                         </td>
                       </tr>
@@ -2728,30 +2744,39 @@ function LogbookView({ currentUser }: { currentUser: any }) {
               </div>
 
               {/* Signatures Blocks */}
-              <div className="mt-12 grid grid-cols-2 gap-8 text-[12pt] text-black">
-                <div>
-                  <p>Bandung Barat, ........................ 2026</p>
-                  <p className="font-bold">Peserta KKN,</p>
-                  <div className="h-16"></div>
-                  <p className="font-bold">{activeMember?.name}</p>
-                  <p>NIM. {activeMember?.nim}</p>
+              <div className="mt-8 flex justify-between text-[11pt] text-black">
+                <div className="flex flex-col justify-between h-[110px] w-[45%]">
+                  <div>
+                    <p className="m-0">Bandung Barat, ........................ 2026</p>
+                    <p className="font-bold mt-1">Peserta,</p>
+                  </div>
+                  <div>
+                    <p className="font-bold m-0">{activeMember?.name}</p>
+                    <p className="mt-1">NIM. {activeMember?.nim}</p>
+                  </div>
                 </div>
-                <div className="text-right md:text-left">
-                  <p>Mengetahui,</p>
-                  <p className="font-bold">Ketua Kelompok 56,</p>
-                  <div className="h-16"></div>
-                  <p className="font-bold">Arpan Maulana</p>
-                  <p>NIM. 1231030055</p>
+                <div className="flex flex-col justify-between h-[110px] w-[45%]">
+                  <div>
+                    <p className="m-0">&nbsp;</p>
+                    <p className="font-bold mt-1">Ketua Kelompok,</p>
+                  </div>
+                  <div>
+                    <p className="font-bold m-0">Arpan Maulana</p>
+                    <p className="mt-1">NIM. 1231030055</p>
+                  </div>
                 </div>
               </div>
 
               {/* Mengetahui DPL Block */}
-              <div className="mt-12 text-center text-[12pt] border-t border-black pt-6 text-black">
-                <p>Mengetahui,</p>
-                <p className="font-semibold">Dosen Pembimbing Lapangan (DPL) Kelompok 56</p>
-                <div className="h-16"></div>
-                <p className="font-bold">Dr. Hj. Yani Heryani, M.Ag.</p>
-                <p>NIP. 197207101998021001</p>
+              <div className="mt-8 flex flex-col items-center justify-between text-[11pt] text-black h-[110px]">
+                <div className="text-center">
+                  <p className="m-0">Mengetahui,</p>
+                  <p className="font-bold mt-1">Dosen Pembimbing Lapangan (DPL)</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold m-0">Dr. Hj. Yani Heryani, M.Ag.</p>
+                  <p className="mt-1">NIP. 197207101998021001</p>
+                </div>
               </div>
             </div>
           </div>

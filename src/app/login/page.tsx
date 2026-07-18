@@ -120,6 +120,11 @@ export default function LoginPage() {
         
         {/* Title */}
         <div className="mb-8 text-center">
+          <img 
+            src="/logo.jpg" 
+            alt="Logo KKN Kelompok 56" 
+            className="h-16 w-16 mx-auto mb-4 rounded-2xl object-cover shadow-lg border border-white/15"
+          />
           <h1 className="text-3xl font-extrabold tracking-tight text-white">
             SISDAMAS 56
           </h1>

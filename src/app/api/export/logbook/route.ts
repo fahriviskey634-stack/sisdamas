@@ -93,6 +93,7 @@ function generateMockLogbookEntries(startDate: string | null, endDate: string | 
 }
 
 export async function GET(req: NextRequest) {
+  let htmlString = '';
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
@@ -145,110 +146,120 @@ export async function GET(req: NextRequest) {
 
     // 2. Render formatting response
     if (format === 'docx') {
-      // Build Word Document utilizing npm 'docx'
-      const docSections: docx.ISectionOptions[] = [];
+      const docChildren: any[] = [];
 
-      // SECTION A: COVER PAGE
-      docSections.push({
-        properties: {
-          type: docx.SectionType.NEXT_PAGE,
-        },
+      // Document Title
+      docChildren.push(new docx.Paragraph({
+        alignment: docx.AlignmentType.CENTER,
+        spacing: { before: 200, after: 100 },
         children: [
-          new docx.Paragraph({
-            alignment: docx.AlignmentType.CENTER,
-            spacing: { before: 2000, after: 300 },
-            children: [
-              new docx.TextRun({
-                text: "BUKU CATATAN HARIAN (LOGBOOK)",
-                bold: true,
-                size: 28, // 14pt
-              })
-            ]
-          }),
-          new docx.Paragraph({
-            alignment: docx.AlignmentType.CENTER,
-            spacing: { after: 1500 },
-            children: [
-              new docx.TextRun({
-                text: "KULIAH KERJA NYATA (KKN) REGULER SISDAMAS\nUIN SUNAN GUNUNG DJATI BANDUNG\nTAHUN AKADEMIK 2025/2026",
-                bold: true,
-                size: 24, // 12pt
-              })
-            ]
-          }),
-          new docx.Table({
-            width: { size: 100, type: docx.WidthType.PERCENTAGE },
-            rows: [
-              new docx.TableRow({
-                children: [
-                  new docx.TableCell({ width: { size: 40, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Nama Peserta", bold: true })] })] }),
-                  new docx.TableCell({ width: { size: 60, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: member.name })] })
-                ]
-              }),
-              new docx.TableRow({
-                children: [
-                  new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "NIM / Program Studi", bold: true })] })] }),
-                  new docx.TableCell({ children: [new docx.Paragraph({ text: `${member.nim} / ${member.prodi}` })] })
-                ]
-              }),
-              new docx.TableRow({
-                children: [
-                  new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Fakultas / Divisi", bold: true })] })] }),
-                  new docx.TableCell({ children: [new docx.Paragraph({ text: `${member.fakultas} / ${member.division}` })] })
-                ]
-              }),
-              new docx.TableRow({
-                children: [
-                  new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Lokasi KKN", bold: true })] })] }),
-                  new docx.TableCell({ children: [new docx.Paragraph({ text: "Kelompok 56 - Desa Sukahaji, Kec. Cipeundeuy, Bandung Barat" })] })
-                ]
-              })
-            ]
+          new docx.TextRun({
+            text: "LOGBOOK KKN SISDAMAS",
+            bold: true,
+            size: 28, // 14pt
           })
         ]
-      });
+      }));
 
-      // SECTION B: ENTRIES
-      for (const entry of entries) {
-        const dateFormatted = new Date(entry.entry_date).toLocaleDateString('id-ID', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        });
+      docChildren.push(new docx.Paragraph({
+        alignment: docx.AlignmentType.CENTER,
+        spacing: { after: 100 },
+        children: [
+          new docx.TextRun({
+            text: "UIN SUNAN GUNUNG DJATI BANDUNG",
+            bold: true,
+            size: 24, // 12pt
+          })
+        ]
+      }));
 
-        // Resolve images ahead
-        const tableRows: docx.TableRow[] = [];
-        // Table Header
-        tableRows.push(new docx.TableRow({
-          tableHeader: true,
+      docChildren.push(new docx.Paragraph({
+        alignment: docx.AlignmentType.CENTER,
+        spacing: { after: 400 },
+        children: [
+          new docx.TextRun({
+            text: "TAHUN AKADEMIK 2025/2026",
+            bold: true,
+            size: 22, // 11pt
+          })
+        ]
+      }));
+
+      // Section 1: Identitas Peserta
+      docChildren.push(new docx.Paragraph({
+        spacing: { before: 200, after: 100 },
+        children: [
+          new docx.TextRun({ text: "1. Identitas Peserta", bold: true, size: 22 })
+        ]
+      }));
+
+      const indentList = [
+        `1. Nama : ${member.name}`,
+        `2. NIM / Prodi : ${member.nim} / ${member.prodi}`,
+        `3. Fakultas : ${member.fakultas}`,
+        `4. Kelompok : Kelompok 56`,
+        `5. Lokasi : Dusun 2, Desa Sukahaji, Kecamatan Cipeundeuy, Kabupaten Bandung Barat, Provinsi Jawa Barat`
+      ];
+
+      for (const item of indentList) {
+        docChildren.push(new docx.Paragraph({
+          spacing: { after: 80 },
           children: [
-            new docx.TableCell({ width: { size: 10, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "No", bold: true })] })] }),
-            new docx.TableCell({ width: { size: 40, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Uraian Kegiatan", bold: true })] })] }),
-            new docx.TableCell({ width: { size: 30, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Output Kegiatan", bold: true })] })] }),
-            new docx.TableCell({ width: { size: 10, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Vol", bold: true })] })] }),
-            new docx.TableCell({ width: { size: 10, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Bukti Foto", bold: true })] })] })
+            new docx.TextRun({ text: item, size: 22 })
           ]
         }));
+      }
 
-        const activitiesList = entry.logbook_activity || [];
-        for (let i = 0; i < activitiesList.length; i++) {
-          const act = activitiesList[i];
+      // Section 2: Entri Kegiatan
+      docChildren.push(new docx.Paragraph({
+        spacing: { before: 300, after: 150 },
+        children: [
+          new docx.TextRun({ text: "2. Entri Kegiatan", bold: true, size: 22 })
+        ]
+      }));
+
+      // Prepare activities table rows
+      const tableRows: docx.TableRow[] = [];
+
+      // Header Row
+      tableRows.push(new docx.TableRow({
+        tableHeader: true,
+        children: [
+          new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 8, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "No", bold: true, size: 22 })] })] }),
+          new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 17, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Tanggal", bold: true, size: 22 })] })] }),
+          new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 40, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Kegiatan", bold: true, size: 22 })] })] }),
+          new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 25, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Output", bold: true, size: 22 })] })] }),
+          new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 10, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Bukti Foto", bold: true, size: 22 })] })] })
+        ]
+      }));
+
+      let idx = 1;
+      for (const entry of entries) {
+        const d = new Date(entry.entry_date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const dateFormatted = `${day}/${month}/${year}`;
+
+        const acts = entry.logbook_activity || [];
+        for (const act of acts) {
           const imgBuffer = await prepareForEmbed(act.bukti_foto_url);
 
           tableRows.push(new docx.TableRow({
             children: [
-              new docx.TableCell({ children: [new docx.Paragraph({ text: String(i + 1) })] }),
-              new docx.TableCell({ children: [new docx.Paragraph({ text: act.kegiatan })] }),
-              new docx.TableCell({ children: [new docx.Paragraph({ text: act.output })] }),
-              new docx.TableCell({ children: [new docx.Paragraph({ text: `${act.volume} ${act.satuan}` })] }),
+              new docx.TableCell({ width: { size: 8, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: String(idx++) })] }),
+              new docx.TableCell({ width: { size: 17, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: dateFormatted })] }),
+              new docx.TableCell({ width: { size: 40, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: act.kegiatan })] }),
+              new docx.TableCell({ width: { size: 25, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: act.output })] }),
               new docx.TableCell({
+                width: { size: 10, type: docx.WidthType.PERCENTAGE },
                 children: [
                   new docx.Paragraph({
+                    alignment: docx.AlignmentType.CENTER,
                     children: [
                       new docx.ImageRun({
                         data: imgBuffer,
-                        transformation: { width: 60, height: 60 },
+                        transformation: { width: 50, height: 50 },
                         type: "jpg"
                       })
                     ]
@@ -258,106 +269,83 @@ export async function GET(req: NextRequest) {
             ]
           }));
         }
-
-        if (activitiesList.length === 0) {
-          tableRows.push(new docx.TableRow({
-            children: [
-              new docx.TableCell({ columnSpan: 5, children: [new docx.Paragraph({ text: "Tidak ada kegiatan pada hari ini.", alignment: docx.AlignmentType.CENTER })] })
-            ]
-          }));
-        }
-
-        docSections.push({
-          properties: {
-            type: docx.SectionType.NEXT_PAGE,
-            page: {
-              margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } // 2cm in twentieths of a point (1440 = 1 inch)
-            }
-          },
-          headers: {
-            default: new docx.Header({
-              children: [
-                new docx.Paragraph({
-                  alignment: docx.AlignmentType.RIGHT,
-                  children: [
-                    new docx.TextRun({
-                      text: `${member.name} — NIM ${member.nim} — Kelompok 56 / Dusun 2`,
-                      size: 18,
-                      italics: true
-                    })
-                  ]
-                })
-              ]
-            })
-          },
-          children: [
-            new docx.Paragraph({
-              spacing: { before: 200, after: 200 },
-              children: [
-                new docx.TextRun({ text: `Hari/Tanggal: ${dateFormatted}`, bold: true, size: 24 })
-              ]
-            }),
-            new docx.Table({
-              width: { size: 100, type: docx.WidthType.PERCENTAGE },
-              rows: tableRows
-            }),
-            new docx.Paragraph({ spacing: { before: 800 } }), // spacing
-            // Signatures
-            new docx.Table({
-              width: { size: 100, type: docx.WidthType.PERCENTAGE },
-              borders: docx.TableBorders.NONE,
-              rows: [
-                new docx.TableRow({
-                  children: [
-                    new docx.TableCell({
-                      children: [
-                        new docx.Paragraph({ text: "Bandung Barat, ........................ 2026" }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "Peserta KKN,", bold: true })] }),
-                        new docx.Paragraph({ spacing: { before: 1000 } }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: member.name, bold: true })] }),
-                        new docx.Paragraph({ text: `NIM. ${member.nim}` })
-                      ]
-                    }),
-                    new docx.TableCell({
-                      children: [
-                        new docx.Paragraph({ text: "Mengetahui," }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "Ketua Kelompok 56,", bold: true })] }),
-                        new docx.Paragraph({ spacing: { before: 1000 } }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "Arpan Maulana", bold: true })] }),
-                        new docx.Paragraph({ text: "NIM. 1231030055" })
-                      ]
-                    })
-                  ]
-                }),
-                new docx.TableRow({
-                  children: [
-                    new docx.TableCell({
-                      columnSpan: 2,
-                      children: [
-                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 600 }, text: "Mengetahui," }),
-                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dosen Pembimbing Lapangan (DPL) Kelompok 56", bold: true })] }),
-                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 1000 } }),
-                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dr. Hj. Yani Heryani, M.Ag.", bold: true })] }),
-                        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: "NIP. 197207101998021001" })
-                      ]
-                    })
-                  ]
-                })
-              ]
-            })
-          ]
-        });
       }
+
+      if (idx === 1) {
+        tableRows.push(new docx.TableRow({
+          children: [
+            new docx.TableCell({ columnSpan: 5, children: [new docx.Paragraph({ text: "Tidak ada kegiatan pada periode ini.", alignment: docx.AlignmentType.CENTER })] })
+          ]
+        }));
+      }
+
+      docChildren.push(new docx.Table({
+        width: { size: 100, type: docx.WidthType.PERCENTAGE },
+        rows: tableRows
+      }));
+
+      // Section 3: Signatures
+      docChildren.push(new docx.Paragraph({ spacing: { before: 600 } }));
+
+      docChildren.push(new docx.Table({
+        width: { size: 100, type: docx.WidthType.PERCENTAGE },
+        borders: docx.TableBorders.NONE,
+        rows: [
+          new docx.TableRow({
+            children: [
+              new docx.TableCell({
+                children: [
+                  new docx.Paragraph({ text: "Bandung Barat, ........................ 2026" }),
+                  new docx.Paragraph({ children: [new docx.TextRun({ text: "Peserta,", bold: true })] }),
+                  new docx.Paragraph({ spacing: { before: 1000 } }),
+                  new docx.Paragraph({ children: [new docx.TextRun({ text: member.name, bold: true })] }),
+                  new docx.Paragraph({ text: `NIM. ${member.nim}` })
+                ]
+              }),
+              new docx.TableCell({
+                children: [
+                  new docx.Paragraph({ text: "" }),
+                  new docx.Paragraph({ children: [new docx.TextRun({ text: "Ketua Kelompok,", bold: true })] }),
+                  new docx.Paragraph({ spacing: { before: 1000 } }),
+                  new docx.Paragraph({ children: [new docx.TextRun({ text: "Arpan Maulana", bold: true })] }),
+                  new docx.Paragraph({ text: "NIM. 1231030055" })
+                ]
+              })
+            ]
+          }),
+          new docx.TableRow({
+            children: [
+              new docx.TableCell({
+                columnSpan: 2,
+                children: [
+                  new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 500 }, text: "Mengetahui," }),
+                  new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dosen Pembimbing Lapangan (DPL)", bold: true })] }),
+                  new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 1000 } }),
+                  new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Dr. Hj. Yani Heryani, M.Ag.", bold: true })] }),
+                  new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: "NIP. 197207101998021001" })
+                ]
+              })
+            ]
+          })
+        ]
+      }));
 
       const doc = new docx.Document({
         styles: {
           default: {
             document: {
-              run: { font: "Times New Roman", size: 24, color: "000000" } // size: 24 half-points = 12pt
+              run: { font: "Times New Roman", size: 24, color: "000000" } // 12pt
             }
           }
         },
-        sections: docSections
+        sections: [{
+          properties: {
+            page: {
+              margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } // 2cm
+            }
+          },
+          children: docChildren
+        }]
       });
 
       const buffer = await docx.Packer.toBuffer(doc);
@@ -368,44 +356,30 @@ export async function GET(req: NextRequest) {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         }
       });
-
-    } else {
+        } else {
       // Build HTML string for PDF rendering
-      let htmlString = `
+      htmlString = `
         <!DOCTYPE html>
         <html>
         <head>
+          <meta charset="utf-8">
+          <title>Logbook KKN - ${member.name}</title>
           <style>
             @page {
-              margin: 0;
+              size: A4;
+              margin: 2cm;
             }
             body {
               font-family: "Times New Roman", Times, serif;
               color: #000000;
               margin: 0;
               padding: 0;
-            }
-            .page-container {
-              width: 170mm;
-              height: 250mm;
-              padding: 20mm;
-              box-sizing: border-box;
-              position: relative;
-              page-break-after: always;
-            }
-            .running-header {
-              font-style: italic;
-              font-size: 9pt;
-              text-align: right;
-              border-bottom: 1px solid #000;
-              padding-bottom: 5px;
-              margin-bottom: 15px;
+              font-size: 11pt;
+              line-height: 1.5;
             }
             .title-block {
               text-align: center;
-              margin-bottom: 30px;
-              border-bottom: 2px solid #000000;
-              padding-bottom: 10px;
+              margin-bottom: 25px;
             }
             .title-block h1 {
               font-size: 14pt;
@@ -417,213 +391,181 @@ export async function GET(req: NextRequest) {
               font-size: 12pt;
               margin: 5px 0 0 0;
               text-transform: uppercase;
+              font-weight: bold;
             }
-            .cover-info {
-              margin-top: 50px;
-              font-size: 12pt;
-              line-height: 2;
-            }
-            .cover-info td {
-              border: none !important;
-              padding: 5px !important;
-              vertical-align: top;
+            .title-block h3 {
+              font-size: 11pt;
+              margin: 5px 0 0 0;
+              font-weight: bold;
             }
             .section-title {
-              font-size: 12pt;
+              font-size: 11pt;
               font-weight: bold;
-              margin-bottom: 10px;
+              margin: 20px 0 10px 0;
+            }
+            .identitas-list {
+              margin: 0 0 20px 0;
+              padding-left: 20px;
+              list-style-type: decimal;
+            }
+            .identitas-list li {
+              margin-bottom: 5px;
             }
             table {
               width: 100%;
               border-collapse: collapse;
               margin-bottom: 20px;
-              font-size: 10pt;
             }
             th, td {
               border: 1px solid #000000;
-              padding: 8px 10px;
+              padding: 6px 8px;
               text-align: left;
+              vertical-align: top;
             }
             th {
               font-weight: bold;
-              background-color: #f2f2f2;
+              background-color: #fff2cc;
+              text-align: center;
             }
             .bukti-foto {
-              width: 60px;
-              height: 60px;
+              width: 50px;
+              height: 50px;
               object-fit: cover;
+              display: block;
+              margin: 0 auto;
             }
             .signatures {
               margin-top: 30px;
               display: flex;
               justify-content: space-between;
-              font-size: 11pt;
+              page-break-inside: avoid;
             }
             .signature-col {
               width: 45%;
               display: flex;
               flex-direction: column;
               justify-content: space-between;
-              height: 120px;
+              height: 110px;
             }
             .dpl-signature {
-              margin-top: 40px;
+              margin-top: 35px;
               text-align: center;
-              font-size: 11pt;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: space-between;
-              height: 120px;
+              height: 110px;
+              page-break-inside: avoid;
             }
             .bold { font-weight: bold; }
-            .underline { text-decoration: underline; }
+            @media print {
+              .no-print { display: none !important; }
+            }
           </style>
         </head>
         <body>
-          <!-- 1. COVER PAGE -->
-          <div class="page-container" style="display: flex; flex-direction: column; justify-content: space-between; height: 250mm;">
-            <div>
-              <div class="title-block" style="border-bottom: none; margin-top: 50px;">
-                <h1>BUKU CATATAN HARIAN (LOGBOOK)</h1>
-                <h2>KULIAH KERJA NYATA (KKN) REGULER SISDAMAS</h2>
-                <h2>UIN SUNAN GUNUNG DJATI BANDUNG</h2>
-                <h3 style="font-size: 11pt; margin-top: 10px;">TAHUN AKADEMIK 2025/2026</h3>
-              </div>
-              <table class="cover-info" style="width: 100%; margin-top: 100px;">
-                <tr>
-                  <td style="width: 35%; font-weight: bold;">Nama Peserta</td>
-                  <td style="width: 5%;">:</td>
-                  <td>${member.name}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">NIM / Program Studi</td>
-                  <td>:</td>
-                  <td>${member.nim} / ${member.prodi}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">Fakultas / Divisi</td>
-                  <td>:</td>
-                  <td>${member.fakultas} / ${member.division}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: bold;">Lokasi KKN</td>
-                  <td>:</td>
-                  <td>Kelompok 56 - Desa Sukahaji, Kec. Cipeundeuy, Bandung Barat</td>
-                </tr>
-              </table>
-            </div>
-            <div style="text-align: center; margin-bottom: 50px; font-weight: bold; font-size: 12pt;">
-              PUSAT PENGABDIAN KEPADA MASYARAKAT (LP2M)<br>
-              UIN SUNAN GUNUNG DJATI BANDUNG<br>
-              2026
-            </div>
+          <div class="title-block">
+            <h1>LOGBOOK KKN SISDAMAS</h1>
+            <h2>UIN SUNAN GUNUNG DJATI BANDUNG</h2>
+            <h3>TAHUN AKADEMIK 2025/2026</h3>
           </div>
+
+          <div class="section-title">1. Identitas Peserta</div>
+          <ol class="identitas-list">
+            <li><strong>Nama:</strong> ${member.name}</li>
+            <li><strong>NIM / Prodi:</strong> ${member.nim} / ${member.prodi}</li>
+            <li><strong>Fakultas:</strong> ${member.fakultas}</li>
+            <li><strong>Kelompok:</strong> Kelompok 56</li>
+            <li><strong>Lokasi:</strong> Dusun 2, Desa Sukahaji, Kecamatan Cipeundeuy, Kabupaten Bandung Barat, Provinsi Jawa Barat</li>
+          </ol>
+
+          <div class="section-title">2. Entri Kegiatan</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%;">No</th>
+                <th style="width: 15%;">Tanggal</th>
+                <th style="width: 45%; text-align: left;">Kegiatan</th>
+                <th style="width: 25%; text-align: left;">Output</th>
+                <th style="width: 10%;">Bukti Foto</th>
+              </tr>
+            </thead>
+            <tbody>
       `;
 
-      // 2. DAILY ENTRIES PAGES
+      let idx = 1;
       for (const entry of entries) {
-        const dateFormatted = new Date(entry.entry_date).toLocaleDateString('id-ID', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        });
+        const d = new Date(entry.entry_date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const dateFormatted = `${day}/${month}/${year}`;
 
-        htmlString += `
-          <div class="page-container">
-            <div class="running-header">
-              ${member.name} &mdash; NIM ${member.nim} &mdash; Kelompok 56 / Dusun 2
-            </div>
-            
-            <div class="section-title">
-              Hari/Tanggal: ${dateFormatted}
-            </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 5%; text-align: center;">No</th>
-                  <th style="width: 45%;">Uraian Aktivitas/Kegiatan</th>
-                  <th style="width: 30%;">Output / Hasil Kegiatan</th>
-                  <th style="width: 10%; text-align: center;">Volume</th>
-                  <th style="width: 10%; text-align: center;">Bukti</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-
-        const activitiesList = entry.logbook_activity || [];
-        for (let i = 0; i < activitiesList.length; i++) {
-          const act = activitiesList[i];
-          const imgUrl = act.bukti_foto_url && !act.bukti_foto_url.includes('default_foto.jpg')
-            ? act.bukti_foto_url
-            : `data:image/png;base64,${MOCK_IMAGE_BASE64}`;
+        const acts = entry.logbook_activity || [];
+        for (const act of acts) {
+          const imgBuffer = await prepareForEmbed(act.bukti_foto_url);
+          const base64Img = `data:image/jpeg;base64,${imgBuffer.toString('base64')}`;
 
           htmlString += `
             <tr>
-              <td style="text-align: center; font-weight: bold;">${i + 1}</td>
+              <td style="text-align: center; font-weight: bold;">${idx++}</td>
+              <td style="text-align: center;">${dateFormatted}</td>
               <td>${act.kegiatan}</td>
               <td>${act.output}</td>
-              <td style="text-align: center; font-weight: bold;">${act.volume} ${act.satuan}</td>
-              <td style="text-align: center;">
-                <img class="bukti-foto" src="${imgUrl}" />
+              <td>
+                <img class="bukti-foto" src="${base64Img}" />
               </td>
             </tr>
           `;
         }
+      }
 
-        if (activitiesList.length === 0) {
-          htmlString += `
-            <tr>
-              <td colspan="5" style="text-align: center; font-style: italic;">Tidak ada kegiatan pada hari ini.</td>
-            </tr>
-          `;
-        }
-
+      if (idx === 1) {
         htmlString += `
-              </tbody>
-            </table>
-
-            <!-- Signatures -->
-            <div class="signatures">
-              <div class="signature-col">
-                <div>
-                  <p style="margin: 0;">Bandung Barat, ........................ 2026</p>
-                  <p class="bold" style="margin: 5px 0 0 0;">Peserta KKN,</p>
-                </div>
-                <div>
-                  <p class="bold" style="margin: 0;">${member.name}</p>
-                  <p style="margin: 5px 0 0 0;">NIM. ${member.nim}</p>
-                </div>
-              </div>
-              <div class="signature-col">
-                <div>
-                  <p style="margin: 0;">Mengetahui,</p>
-                  <p class="bold" style="margin: 5px 0 0 0;">Ketua Kelompok 56,</p>
-                </div>
-                <div>
-                  <p class="bold" style="margin: 0;">Arpan Maulana</p>
-                  <p style="margin: 5px 0 0 0;">NIM. 1231030055</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="dpl-signature">
-              <div>
-                <p style="margin: 0;">Mengetahui,</p>
-                <p class="bold" style="margin: 5px 0 0 0;">Dosen Pembimbing Lapangan (DPL) Kelompok 56</p>
-              </div>
-              <div style="margin-top: 50px;">
-                <p class="bold" style="margin: 0;">Dr. Hj. Yani Heryani, M.Ag.</p>
-                <p style="margin: 5px 0 0 0;">NIP. 197207101998021001</p>
-              </div>
-            </div>
-          </div>
+          <tr>
+            <td colspan="5" style="text-align: center; font-style: italic;">Tidak ada kegiatan pada periode ini.</td>
+          </tr>
         `;
       }
 
       htmlString += `
+            </tbody>
+          </table>
+
+          <!-- Signatures -->
+          <div class="signatures">
+            <div class="signature-col">
+              <div>
+                <p style="margin: 0;">Bandung Barat, ........................ 2026</p>
+                <p class="bold" style="margin: 5px 0 0 0;">Peserta,</p>
+              </div>
+              <div>
+                <p class="bold" style="margin: 0;">${member.name}</p>
+                <p style="margin: 5px 0 0 0;">NIM. ${member.nim}</p>
+              </div>
+            </div>
+            <div class="signature-col">
+              <div>
+                <p style="margin: 0;">&nbsp;</p>
+                <p class="bold" style="margin: 5px 0 0 0;">Ketua Kelompok,</p>
+              </div>
+              <div>
+                <p class="bold" style="margin: 0;">Arpan Maulana</p>
+                <p style="margin: 5px 0 0 0;">NIM. 1231030055</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="dpl-signature">
+            <div>
+              <p style="margin: 0;">Mengetahui,</p>
+              <p class="bold" style="margin: 5px 0 0 0;">Dosen Pembimbing Lapangan (DPL)</p>
+            </div>
+            <div>
+              <p class="bold" style="margin: 0;">Dr. Hj. Yani Heryani, M.Ag.</p>
+              <p style="margin: 5px 0 0 0;">NIP. 197207101998021001</p>
+            </div>
+          </div>
         </body>
         </html>
       `;
@@ -653,6 +595,26 @@ export async function GET(req: NextRequest) {
 
   } catch (err: any) {
     console.error('Export Logbook Error:', err);
+    if (htmlString) {
+      const htmlWithBanner = htmlString.replace('<body>', `
+        <body>
+          <div style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; text-align: center; font-family: sans-serif; font-size: 11pt; border-bottom: 2px solid #ffe8a1;" class="no-print">
+            ⚠️ <strong>Pemberitahuan Sistem:</strong> Ekspor PDF otomatis di server dinonaktifkan di Vercel. 
+            Silakan tekan <strong>Ctrl + P</strong> (Windows) atau <strong>Cmd + P</strong> (Mac) untuk menyimpan halaman ini sebagai PDF dengan format resmi.
+          </div>
+          <style>
+            @media print {
+              .no-print { display: none !important; }
+            }
+          </style>
+      `);
+      return new NextResponse(htmlWithBanner, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        }
+      });
+    }
     return NextResponse.json({ error: err.message || 'Gagal mengekspor logbook' }, { status: 500 });
   }
 }
