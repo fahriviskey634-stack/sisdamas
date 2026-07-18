@@ -4,6 +4,24 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 
+const KKN_MEMBERS = [
+  { nim: '1234060108', name: 'Aisyah Shofa Aini', gender: 'P', prodi: 'S1 - Ilmu Komunikasi Humas', fakultas: 'Dakwah dan Komunikasi', email: 'aisyah.shofa@sukahaji-official.id', division: 'Sekretaris (BPH)' },
+  { nim: '1231030055', name: 'Arpan Maulana', gender: 'L', prodi: 'S1 - Ilmu Al-Qur\'an dan Tafsir', fakultas: 'Ushuluddin', email: 'arpan.maulana@sukahaji-official.id', division: 'Ketua (BPH)' },
+  { nim: '1237010003', name: 'Tifa Astrianti', gender: 'P', prodi: 'S1 - Matematika', fakultas: 'Sains dan Teknologi', email: 'tifa.astrianti@sukahaji-official.id', division: 'Bendahara (BPH)' },
+  { nim: '1235060059', name: 'Hani Husnul Nuwat', gender: 'P', prodi: 'S1 - Ilmu Perpustakaan dan Informasi Islam', fakultas: 'Adab dan Humaniora', email: 'hani.husnul@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232040021', name: 'Indah Sri Rahayu', gender: 'P', prodi: 'S1 - Pendidikan Bahasa Inggris', fakultas: 'Tarbiyah dan Keguruan', email: 'indah.sri@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232050026', name: 'Hasna Khairinisa Asy Syifa', gender: 'P', prodi: 'S1 - Pendidikan Matematika', fakultas: 'Tarbiyah dan Keguruan', email: 'hasna.khairinisa@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1238010111', name: 'Ilya Hanifah Hakim', gender: 'P', prodi: 'S1 - Administrasi Publik', fakultas: 'Ilmu Sosial dan Ilmu Politik', email: 'ilya.hanifah@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239230099', name: 'Evan Fadhil Al Akbar', gender: 'L', prodi: 'S1 - Manajemen Keuangan Syariah', fakultas: 'Ekonomi dan Bisnis Islam', email: 'evan.fadhil@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1235020162', name: 'Hilya Izza Fitriani', gender: 'P', prodi: 'S1 - Bahasa dan Sastra Arab', fakultas: 'Adab dan Humaniora', email: 'hilya.izza@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239240038', name: 'Kayyis Yasra Ismaya', gender: 'P', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'kayyis.yasra@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1237030018', name: 'Fahry Rizky Samsudin', gender: 'L', prodi: 'S1 - Fisika', fakultas: 'Sains dan Teknologi', email: 'fahry.rizky@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1236000005', name: 'Nova Aulia Rahmawan', gender: 'P', prodi: 'S1 - Psikologi', fakultas: 'Psikologi', email: 'nova.aulia@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1232090080', name: 'Nurdin', gender: 'L', prodi: 'S1 - Pendidikan Guru Madrasah Ibtidaiyah', fakultas: 'Tarbiyah dan Keguruan', email: 'nurdin@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1231040133', name: 'Hanifah Mauludiah', gender: 'P', prodi: 'S1 - Tasawuf dan Psikoterapi', fakultas: 'Ushuluddin', email: 'hanifah.mauludiah@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1239240280', name: 'Ridwan Firmansyah', gender: 'L', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'ridwan.firmansyah@sukahaji-official.id', division: 'Divisi Logsum' }
+];
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,13 +52,19 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Mock fallback check for local developer bypass
+        // Fallback bypass for offline developer testing or specific members
+        const member = KKN_MEMBERS.find(m => m.email === email);
         if (
-          email === 'surveyor@sukahaji-official.id' &&
+          (member || email === 'surveyor@sukahaji-official.id') &&
           password === 'sukahaji123'
         ) {
+          const sessionData = member 
+            ? { isMember: true, email: member.email, name: member.name, nim: member.nim, prodi: member.prodi, fakultas: member.fakultas, division: member.division }
+            : { isMember: false, email: 'surveyor@sukahaji-official.id', name: 'Admin/DPL', nim: 'ADMIN56', prodi: 'Sistem Informasi', fakultas: 'Sains dan Teknologi', division: 'Fasilitator Utama' };
+
           document.cookie = 'sb-access-token=mock-token; path=/; max-age=86400';
           document.cookie = 'sb-refresh-token=mock-refresh; path=/; max-age=86400';
+          document.cookie = `kkn-member-session=${encodeURIComponent(JSON.stringify(sessionData))}; path=/; max-age=86400`;
           
           setSuccessMsg('Login sukses via Mode Pengembang Offline!');
           setTimeout(() => {
@@ -51,17 +75,30 @@ export default function LoginPage() {
         throw new Error(data.error || 'Autentikasi gagal');
       }
 
+      // If server-side login succeeds, set the cookie as well
+      const member = KKN_MEMBERS.find(m => m.email === email);
+      const sessionData = member 
+        ? { isMember: true, email: member.email, name: member.name, nim: member.nim, prodi: member.prodi, fakultas: member.fakultas, division: member.division }
+        : { isMember: false, email: email, name: 'Admin/DPL', nim: 'ADMIN56', prodi: 'Sistem Informasi', fakultas: 'Sains dan Teknologi', division: 'Fasilitator Utama' };
+      document.cookie = `kkn-member-session=${encodeURIComponent(JSON.stringify(sessionData))}; path=/; max-age=86400`;
+
       setSuccessMsg('Login berhasil! Mengarahkan...');
       setTimeout(() => {
         router.push('/app/dashboard');
       }, 1000);
     } catch (err: any) {
+      const member = KKN_MEMBERS.find(m => m.email === email);
       if (
-        email === 'surveyor@sukahaji-official.id' &&
+        (member || email === 'surveyor@sukahaji-official.id') &&
         password === 'sukahaji123'
       ) {
+        const sessionData = member 
+          ? { isMember: true, email: member.email, name: member.name, nim: member.nim, prodi: member.prodi, fakultas: member.fakultas, division: member.division }
+          : { isMember: false, email: 'surveyor@sukahaji-official.id', name: 'Admin/DPL', nim: 'ADMIN56', prodi: 'Sistem Informasi', fakultas: 'Sains dan Teknologi', division: 'Fasilitator Utama' };
+
         document.cookie = 'sb-access-token=mock-token; path=/; max-age=86400';
         document.cookie = 'sb-refresh-token=mock-refresh; path=/; max-age=86400';
+        document.cookie = `kkn-member-session=${encodeURIComponent(JSON.stringify(sessionData))}; path=/; max-age=86400`;
         
         setSuccessMsg('Login sukses via Mode Pengembang Offline!');
         setTimeout(() => {
@@ -108,7 +145,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="mb-1.5 block text-xxs font-semibold tracking-wider text-[#F6F1E6]/80 uppercase">
-              E-mail Surveyor
+              E-mail Anggota
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
@@ -118,7 +155,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="surveyor@sukahaji-official.id"
+                placeholder="nama.panggilan@sukahaji-official.id"
                 className="w-full rounded-xl border border-white/15 bg-white/5 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-400 outline-none focus:border-transisi focus:bg-white/10 transition"
               />
             </div>
@@ -157,15 +194,6 @@ export default function LoginPage() {
             {loading ? 'Menghubungkan...' : 'Masuk Dashboard'}
           </button>
         </form>
-
-        {/* Info Credentials Bypass */}
-        <div className="mt-8 rounded-lg bg-white/5 p-3 text-center border border-white/5">
-          <p className="text-[10px] text-slate-400 leading-normal">
-            <strong>Kredensial Pengetesan Lapangan:</strong><br />
-            Email: <code className="text-transisi font-bold">surveyor@sukahaji-official.id</code><br />
-            Password: <code className="text-transisi font-bold">sukahaji123</code>
-          </p>
-        </div>
       </div>
     </div>
   );

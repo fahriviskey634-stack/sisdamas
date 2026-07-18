@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Camera, Navigation, AlertTriangle, CheckCircle, Plus, Info, Tag, Key, Shield, ArrowLeft, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Camera, Navigation, AlertTriangle, CheckCircle, Plus, Info, Tag, Key, Shield, ArrowLeft, ArrowRight, BookOpen, Printer } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
 
@@ -37,6 +37,16 @@ interface PriorityItem {
   growth: number;
   total_score: number;
   rank?: number;
+  a_score?: number;
+  b_score?: number;
+  c_score?: number;
+  d_score?: number;
+  total_score_abcd?: number;
+  rank_abcd?: number;
+  potensi_uraian?: string;
+  alt_mandiri?: string;
+  alt_dukungan_luar?: string;
+  alt_bantuan_luar?: string;
 }
 
 // Dynamically load Map component with SSR disabled
@@ -69,6 +79,42 @@ function DashboardSPA() {
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
   const [rtTargets, setRtTargets] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Read member session from cookie
+  useEffect(() => {
+    const getSessionCookie = () => {
+      const name = 'kkn-member-session=';
+      const decodedCookie = decodeURIComponent(document.cookie);
+      const ca = decodedCookie.split('; ');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        if (c.indexOf(name) === 0) {
+          try {
+            return JSON.parse(c.substring(name.length));
+          } catch {
+            return null;
+          }
+        }
+      }
+      return null;
+    };
+    
+    const session = getSessionCookie();
+    if (session) {
+      setCurrentUser(session);
+    } else {
+      setCurrentUser({
+        isMember: false,
+        email: 'surveyor@sukahaji-official.id',
+        name: 'Admin/DPL',
+        nim: 'ADMIN56',
+        prodi: 'Sistem Informasi',
+        fakultas: 'Sains dan Teknologi',
+        division: 'Fasilitator Utama'
+      });
+    }
+  }, []);
 
   // Initialize targets from localStorage or defaults
   useEffect(() => {
@@ -223,6 +269,17 @@ function DashboardSPA() {
             </button>
 
             <button
+              onClick={() => switchTab('logbook')}
+              className={`flex items-center gap-3.5 w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 transform hover:translate-x-1 ${
+                currentTab === 'logbook'
+                  ? 'bg-gradient-to-r from-[#194A5B] to-[#407F8F] text-white shadow-md shadow-[#092430]/60 border-l-4 border-[#D9CBB0]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <BookOpen className="h-4.5 w-4.5" /> Logbook Harian KKN
+            </button>
+
+            <button
               onClick={() => switchTab('siklus-4')}
               className={`flex items-center gap-3.5 w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 transform hover:translate-x-1 ${
                 currentTab === 'siklus-4'
@@ -249,12 +306,12 @@ function DashboardSPA() {
         {/* User Session Footer Badge */}
         <div className="p-4 border-t border-[#194A5B]/35 bg-[#071d26]/20">
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 border border-white/5 mb-3">
-            <div className="h-7 w-7 rounded-full bg-[#D9CBB0] text-[#092430] flex items-center justify-center font-bold text-xs shadow-inner">
-              F
+            <div className="h-7 w-7 rounded-full bg-[#D9CBB0] text-[#092430] flex items-center justify-center font-bold text-xs shadow-inner uppercase">
+              {currentUser?.name ? currentUser.name.charAt(0) : 'F'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-[10px] font-black truncate text-[#F6F1E6]">Fasilitator KKN</p>
-              <p className="text-[9px] text-slate-450 truncate">Kelompok 56 Sukahaji</p>
+              <p className="text-[10px] font-black truncate text-[#F6F1E6]">{currentUser?.name || 'Fasilitator KKN'}</p>
+              <p className="text-[9px] text-slate-400 truncate">{currentUser?.division || 'Kelompok 56 Sukahaji'}</p>
             </div>
           </div>
           
@@ -277,7 +334,8 @@ function DashboardSPA() {
               {currentTab === 'dashboard' && 'Beranda Analitik KKN'}
               {currentTab === 'sticky-notes' && 'Siklus 1: Rembug Warga'}
               {currentTab === 'siklus-2' && 'Siklus 2: Sensus & Pemetaan GIS'}
-              {currentTab === 'priority' && 'Siklus 3: Klasifikasi Prioritas (USG)'}
+              {currentTab === 'priority' && 'Siklus 3: Klasifikasi & Skoring Prioritas'}
+              {currentTab === 'logbook' && 'Buku Harian: Logbook KKN'}
               {currentTab === 'siklus-4' && 'Siklus 4: Program Kerja & Evaluasi'}
               {currentTab === 'profile' && 'Profil & Pengaturan Platform'}
             </h1>
@@ -314,6 +372,7 @@ function DashboardSPA() {
           {currentTab === 'sticky-notes' && <StickyNotesView />}
           {currentTab === 'siklus-2' && <Siklus2View updateDraftCount={updateDraftCount} />}
           {currentTab === 'priority' && <PriorityView />}
+          {currentTab === 'logbook' && <LogbookView currentUser={currentUser} />}
           {currentTab === 'siklus-4' && <Siklus4View />}
           {currentTab === 'profile' && (
             <ProfileView 
@@ -975,38 +1034,86 @@ function Siklus2View({ updateDraftCount }: any) {
 // SUB-VIEW 1.6: Siklus 4 View Component (Program Kerja & Evaluasi)
 // -------------------------------------------------------------
 function Siklus4View() {
-  const [programs, setPrograms] = useState<any[]>([
-    {
-      id: '1',
-      name: 'Normalisasi Selokan & Saluran Air RT 02 / RW 01',
-      priorityName: 'Saluran air mampet dan berbau (Skor USG: 13)',
-      pic: 'Rizki & Kelompok 56',
-      status: 'In Progress',
-      progress: 60,
-      description: 'Pembersihan got mampet bersama warga dusun untuk mencegah demam berdarah.',
-      evaluation: 'Partisipasi warga sangat tinggi, got lancar kembali.'
-    },
-    {
-      id: '2',
-      name: 'Pengadaan Drum Bak Sampah Organik & Anorganik',
-      priorityName: 'Pembuangan sampah sembarangan di gang RT 03 (Skor USG: 11)',
-      pic: 'Fasilitator Kelompok 56',
-      status: 'Planned',
-      progress: 20,
-      description: 'Penyediaan 6 unit drum pemilah sampah organik dan non-organik di gang utama.',
-      evaluation: 'Drum sampah dalam tahap pengecatan dan pemberian stiker edukasi.'
-    }
-  ]);
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [success, setSuccess] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Load priority problems for linking
+  const [priorityProblems, setPriorityProblems] = useState<any[]>([]);
+
+  // Form states
   const [newName, setNewName] = useState('');
-  const [newPriority, setNewPriority] = useState('Masalah Infrastruktur Saluran Air');
+  const [newPriority, setNewPriority] = useState('');
+  const [newVolume, setNewVolume] = useState('');
+  const [newFrequency, setNewFrequency] = useState('');
+  const [newLocation, setNewLocation] = useState('');
+  const [newTarget, setNewTarget] = useState('');
+  const [newBudget, setNewBudget] = useState('');
   const [newPic, setNewPic] = useState('Kelompok 56 KKN');
   const [newStatus, setNewStatus] = useState('Planned');
   const [newProgress, setNewProgress] = useState(0);
   const [newDesc, setNewDesc] = useState('');
   const [newEval, setNewEval] = useState('');
 
-  const [showAddForm, setShowAddForm] = useState(false);
+  // Load programs & priority problems from localStorage
+  useEffect(() => {
+    // Priority Problems
+    const savedProblems = localStorage.getItem('sukahaji_priority_items');
+    if (savedProblems) {
+      const parsed = JSON.parse(savedProblems);
+      setPriorityProblems(parsed);
+      if (parsed.length > 0) {
+        setNewPriority(parsed[0].problem_text);
+      }
+    } else {
+      setPriorityProblems(INITIAL_PROBLEMS);
+      if (INITIAL_PROBLEMS.length > 0) {
+        setNewPriority(INITIAL_PROBLEMS[0].problem_text);
+      }
+    }
+
+    // Programs
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs');
+    if (savedProgs) {
+      setPrograms(JSON.parse(savedProgs));
+    } else {
+      const defaultProgs = [
+        {
+          id: '1',
+          name: 'Normalisasi Selokan & Saluran Air RT 02 / RW 01',
+          priorityName: 'Saluran air mampet dan berbau (Skor USG: 13)',
+          volume: '150 Meter',
+          frequency: '1 Kali (Kerja Bakti)',
+          location: 'RT 02 / RW 01',
+          target: 'Warga Dusun 2',
+          budget: 'Rp 450.000 (Swadaya)',
+          pic: 'Rizki & Kelompok 56',
+          status: 'In Progress',
+          progress: 60,
+          description: 'Pembersihan got mampet bersama warga dusun untuk mencegah demam berdarah.',
+          evaluation: 'Partisipasi warga sangat tinggi, got lancar kembali.'
+        },
+        {
+          id: '2',
+          name: 'Pengadaan Drum Bak Sampah Organik & Anorganik',
+          priorityName: 'Pembuangan sampah sembarangan di gang RT 03 (Skor USG: 11)',
+          volume: '6 Unit Bak',
+          frequency: 'Penyediaan Permanen',
+          location: 'RT 03 / RW 02',
+          target: 'Setiap RT di Dusun 2',
+          budget: 'Rp 1.200.000 (Dana Desa)',
+          pic: 'Fasilitator Kelompok 56',
+          status: 'Planned',
+          progress: 20,
+          description: 'Penyediaan 6 unit drum pemilah sampah organik dan non-organik di gang utama.',
+          evaluation: 'Drum sampah dalam tahap pengecatan dan pemberian stiker edukasi.'
+        }
+      ];
+      setPrograms(defaultProgs);
+      localStorage.setItem('sukahaji_siklus4_programs', JSON.stringify(defaultProgs));
+    }
+  }, []);
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
@@ -1016,6 +1123,11 @@ function Siklus4View() {
       id: String(Date.now()),
       name: newName,
       priorityName: newPriority,
+      volume: newVolume || '-',
+      frequency: newFrequency || '-',
+      location: newLocation || '-',
+      target: newTarget || '-',
+      budget: newBudget || '-',
       pic: newPic,
       status: newStatus,
       progress: Number(newProgress) || 0,
@@ -1023,23 +1135,44 @@ function Siklus4View() {
       evaluation: newEval
     };
 
-    setPrograms([newProg, ...programs]);
+    const updated = [newProg, ...programs];
+    setPrograms(updated);
+    localStorage.setItem('sukahaji_siklus4_programs', JSON.stringify(updated));
+
+    // Clear form
     setNewName('');
+    setNewVolume('');
+    setNewFrequency('');
+    setNewLocation('');
+    setNewTarget('');
+    setNewBudget('');
     setNewDesc('');
     setNewEval('');
+    setNewProgress(0);
+    setNewStatus('Planned');
     setShowAddForm(false);
   };
 
   const deleteProgram = (id: string) => {
-    setPrograms(programs.filter(p => p.id !== id));
+    const updated = programs.filter(p => p.id !== id);
+    setPrograms(updated);
+    localStorage.setItem('sukahaji_siklus4_programs', JSON.stringify(updated));
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
         <div>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">Tabel Rencana & Evaluasi Program KKN</h2>
-          <p className="text-[10px] text-slate-450 mt-0.5">Daftar program KKN pemberdayaan masyarakat hasil siklus 1-3.</p>
+          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+            TABEL 3. Rencana Program Kerja & Evaluasi
+          </h2>
+          <p className="text-[10px] text-slate-450 mt-0.5">
+            Daftar rencana kerja KKN pemberdayaan masyarakat Desa Sukahaji (klik baris untuk melihat detail progres & evaluasi).
+          </p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -1051,16 +1184,16 @@ function Siklus4View() {
 
       {showAddForm && (
         <form onSubmit={handleSubmit} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider border-b border-slate-100 pb-2">Form Rencana Program Baru</h3>
+          <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider border-b border-slate-100 pb-2">Form Rencana Program Baru (Tabel 3)</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div>
-                <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Nama Program Kerja</label>
+                <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Nama Kegiatan / Program Kerja</label>
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Normalisasi Selokan Got RT 02"
+                  placeholder="Contoh: Normalisasi Got Saluran Air RT 02"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
@@ -1069,23 +1202,102 @@ function Siklus4View() {
 
               <div>
                 <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Rujukan Masalah Prioritas (Siklus 3)</label>
-                <input
-                  type="text"
+                <select
                   value={newPriority}
                   onChange={(e) => setNewPriority(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
-                />
+                  className="w-full rounded-lg border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
+                >
+                  {priorityProblems.map(p => (
+                    <option key={p.id} value={p.problem_text}>{p.problem_text}</option>
+                  ))}
+                  {priorityProblems.length === 0 && (
+                    <option value="Umum">Umum / Semua Masalah</option>
+                  )}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">PIC / Penanggung Jawab</label>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Volume</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 150 KK / 2 Unit"
+                    value={newVolume}
+                    onChange={(e) => setNewVolume(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Frekuensi</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 1 kali seminggu"
+                    value={newFrequency}
+                    onChange={(e) => setNewFrequency(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Lokasi Kegiatan</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: RT 02 / RW 01"
+                    value={newLocation}
+                    onChange={(e) => setNewLocation(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Sasaran Kegiatan</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Ibu-ibu kader / Pemuda"
+                    value={newTarget}
+                    onChange={(e) => setNewTarget(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Jumlah (Biaya/Peserta)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Rp 500.000 / 30 Orang"
+                    value={newBudget}
+                    onChange={(e) => setNewBudget(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">PJ (Penanggung Jawab)</label>
                   <input
                     type="text"
                     value={newPic}
                     onChange={(e) => setNewPic(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Status</label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
+                  >
+                    <option value="Planned">Planned (Direncanakan)</option>
+                    <option value="In Progress">In Progress (Berjalan)</option>
+                    <option value="Completed">Completed (Selesai)</option>
+                  </select>
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Progress (%)</label>
@@ -1099,14 +1311,12 @@ function Siklus4View() {
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-3">
               <div>
-                <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Deskripsi Program</label>
+                <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Uraian / Deskripsi Kegiatan</label>
                 <textarea
                   rows={2}
-                  placeholder="Terangkan aktivitas pelaksanaan..."
+                  placeholder="Terangkan detail aktivitas pelaksanaan..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang resize-none"
@@ -1114,10 +1324,10 @@ function Siklus4View() {
               </div>
 
               <div>
-                <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Hasil Evaluasi / Catatan Akhir</label>
+                <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Hasil Penilaian / Catatan Evaluasi Akhir</label>
                 <textarea
                   rows={2}
-                  placeholder="Kelebihan, kendala, atau hasil evaluasi..."
+                  placeholder="Kelebihan, kendala, atau evaluasi program..."
                   value={newEval}
                   onChange={(e) => setNewEval(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang resize-none"
@@ -1137,66 +1347,107 @@ function Siklus4View() {
         </form>
       )}
 
-      <div className="grid grid-cols-1 gap-4">
-        {programs.map((prog) => (
-          <div key={prog.id} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">{prog.name}</h3>
-                <span className="text-[9px] font-black text-teal-650 bg-teal-50 px-2 py-0.5 rounded border border-teal-100/50 mt-1.5 inline-block">
-                  Rujukan: {prog.priorityName}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border ${
-                  prog.status === 'Completed'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : prog.status === 'In Progress'
-                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                }`}>
-                  {prog.status}
-                </span>
-                <button
-                  onClick={() => deleteProgram(prog.id)}
-                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer transition"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-slate-100 text-xxs">
-              <div className="space-y-1">
-                <span className="font-black text-slate-400 uppercase">PJ / Penanggung Jawab</span>
-                <p className="font-bold text-slate-700">{prog.pic}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="font-black text-slate-400 uppercase">Deskripsi Kegiatan</span>
-                <p className="text-slate-600 leading-relaxed">{prog.description || '-'}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="font-black text-slate-400 uppercase">Hasil Penilaian & Evaluasi</span>
-                <p className="text-slate-650 font-semibold bg-slate-50 p-2 rounded-lg border border-slate-150/60 leading-relaxed">
-                  {prog.evaluation || 'Belum ada catatan evaluasi.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1 pt-2">
-              <div className="flex justify-between text-[9px] font-bold text-slate-450">
-                <span>Progress Pelaksanaan</span>
-                <span>{prog.progress}%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-teal-sedang to-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${prog.progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Tabel 3 Output */}
+      <div className="bg-white rounded-xl border border-slate-300/60 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
+                <th className="px-4 py-3 text-center w-12">No</th>
+                <th className="px-4 py-3">Kegiatan/Program</th>
+                <th className="px-4 py-3 text-center">Volume</th>
+                <th className="px-4 py-3 text-center">Frekuensi</th>
+                <th className="px-4 py-3 text-center">Lokasi</th>
+                <th className="px-4 py-3 text-center">Sasaran</th>
+                <th className="px-4 py-3 text-center">Jumlah</th>
+                <th className="px-4 py-3 text-center">PJ</th>
+                <th className="px-4 py-3 w-12"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
+              {programs.map((prog, index) => (
+                <React.Fragment key={prog.id}>
+                  <tr
+                    onClick={() => toggleExpand(prog.id)}
+                    className="hover:bg-slate-50/50 cursor-pointer transition-all"
+                  >
+                    <td className="px-4 py-3 text-center font-bold text-slate-400">{index + 1}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-extrabold text-slate-800 uppercase tracking-wide truncate max-w-xs">{prog.name}</p>
+                      <span className="text-[9px] font-bold text-teal-650 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-150 mt-1 inline-block">
+                        Rujukan: {prog.priorityName}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center font-semibold">{prog.volume}</td>
+                    <td className="px-4 py-3 text-center text-slate-500 font-medium">{prog.frequency}</td>
+                    <td className="px-4 py-3 text-center font-bold text-slate-700">{prog.location}</td>
+                    <td className="px-4 py-3 text-center text-slate-500">{prog.target}</td>
+                    <td className="px-4 py-3 text-center font-bold text-teal-tua">{prog.budget}</td>
+                    <td className="px-4 py-3 text-center text-slate-600 font-semibold">{prog.pic}</td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteProgram(prog.id);
+                        }}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer transition"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                  {/* Expanded detail section */}
+                  {expandedId === prog.id && (
+                    <tr className="bg-slate-50/30">
+                      <td colSpan={9} className="px-6 py-4 border-t border-slate-100">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xxs leading-relaxed">
+                          <div className="space-y-1.5">
+                            <span className="font-black text-slate-400 uppercase tracking-wider block">Status Pelaksanaan</span>
+                            <div className="flex items-center gap-3">
+                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase border ${
+                                prog.status === 'Completed'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : prog.status === 'In Progress'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {prog.status}
+                              </span>
+                              <span className="font-bold text-slate-500">{prog.progress}% Selesai</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden max-w-xs mt-1">
+                              <div
+                                className="bg-gradient-to-r from-teal-sedang to-emerald-500 h-1.5 rounded-full"
+                                style={{ width: `${prog.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="font-black text-slate-400 uppercase tracking-wider block">Uraian / Deskripsi Kegiatan</span>
+                            <p className="text-slate-650 font-medium">{prog.description || '-'}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="font-black text-slate-400 uppercase tracking-wider block">Hasil Penilaian & Evaluasi Akhir</span>
+                            <p className="text-slate-700 font-semibold bg-slate-50 p-2 rounded-lg border border-slate-200/50">
+                              {prog.evaluation || 'Belum ada catatan evaluasi.'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+              {programs.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400 font-medium italic">
+                    Belum ada program kerja yang ditambahkan. Silakan klik tombol "+ Tambah Program Kerja".
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -1739,13 +1990,519 @@ function MapView() {
 }
 
 // -------------------------------------------------------------
+// CONSTANTS: KKN Group 56 Members
+// -------------------------------------------------------------
+const KKN_MEMBERS = [
+  { nim: '1234060108', name: 'Aisyah Shofa Aini', gender: 'P', prodi: 'S1 - Ilmu Komunikasi Humas', fakultas: 'Dakwah dan Komunikasi', email: 'aisyah.shofa@sukahaji-official.id', division: 'Sekretaris (BPH)' },
+  { nim: '1231030055', name: 'Arpan Maulana', gender: 'L', prodi: 'S1 - Ilmu Al-Qur\'an dan Tafsir', fakultas: 'Ushuluddin', email: 'arpan.maulana@sukahaji-official.id', division: 'Ketua (BPH)' },
+  { nim: '1237010003', name: 'Tifa Astrianti', gender: 'P', prodi: 'S1 - Matematika', fakultas: 'Sains dan Teknologi', email: 'tifa.astrianti@sukahaji-official.id', division: 'Bendahara (BPH)' },
+  { nim: '1235060059', name: 'Hani Husnul Nuwat', gender: 'P', prodi: 'S1 - Ilmu Perpustakaan dan Informasi Islam', fakultas: 'Adab dan Humaniora', email: 'hani.husnul@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232040021', name: 'Indah Sri Rahayu', gender: 'P', prodi: 'S1 - Pendidikan Bahasa Inggris', fakultas: 'Tarbiyah dan Keguruan', email: 'indah.sri@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1232050026', name: 'Hasna Khairinisa Asy Syifa', gender: 'P', prodi: 'S1 - Pendidikan Matematika', fakultas: 'Tarbiyah dan Keguruan', email: 'hasna.khairinisa@sukahaji-official.id', division: 'Divisi Acara' },
+  { nim: '1238010111', name: 'Ilya Hanifah Hakim', gender: 'P', prodi: 'S1 - Administrasi Publik', fakultas: 'Ilmu Sosial dan Ilmu Politik', email: 'ilya.hanifah@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239230099', name: 'Evan Fadhil Al Akbar', gender: 'L', prodi: 'S1 - Manajemen Keuangan Syariah', fakultas: 'Ekonomi dan Bisnis Islam', email: 'evan.fadhil@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1235020162', name: 'Hilya Izza Fitriani', gender: 'P', prodi: 'S1 - Bahasa dan Sastra Arab', fakultas: 'Adab dan Humaniora', email: 'hilya.izza@sukahaji-official.id', division: 'Divisi Media' },
+  { nim: '1239240038', name: 'Kayyis Yasra Ismaya', gender: 'P', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'kayyis.yasra@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1237030018', name: 'Fahry Rizky Samsudin', gender: 'L', prodi: 'S1 - Fisika', fakultas: 'Sains dan Teknologi', email: 'fahry.rizky@sukahaji-official.id', division: 'Divisi Humas' },
+  { nim: '1236000005', name: 'Nova Aulia Rahmawan', gender: 'P', prodi: 'S1 - Psikologi', fakultas: 'Psikologi', email: 'nova.aulia@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1232090080', name: 'Nurdin', gender: 'L', prodi: 'S1 - Pendidikan Guru Madrasah Ibtidaiyah', fakultas: 'Tarbiyah dan Keguruan', email: 'nurdin@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1231040133', name: 'Hanifah Mauludiah', gender: 'P', prodi: 'S1 - Tasawuf dan Psikoterapi', fakultas: 'Ushuluddin', email: 'hanifah.mauludiah@sukahaji-official.id', division: 'Divisi Logsum' },
+  { nim: '1239240280', name: 'Ridwan Firmansyah', gender: 'L', prodi: 'S1 - Manajemen (FEBI)', fakultas: 'Ekonomi dan Bisnis Islam', email: 'ridwan.firmansyah@sukahaji-official.id', division: 'Divisi Logsum' }
+];
+
+// -------------------------------------------------------------
+// SUB-VIEW 4.5: Logbook View Component (Logbook Harian)
+// -------------------------------------------------------------
+function LogbookView({ currentUser }: { currentUser: any }) {
+  const [activeNim, setActiveNim] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [success, setSuccess] = useState(false);
+  const [rekap, setRekap] = useState<any[]>([]);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+
+  // Form states for new activity row
+  const [kegiatanText, setKegiatanText] = useState('');
+  const [outputText, setOutputText] = useState('');
+  const [volumeVal, setVolumeVal] = useState<number>(1);
+  const [satuanVal, setSatuanVal] = useState('kali');
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+
+  // Sync activeNim with currentUser
+  useEffect(() => {
+    if (currentUser) {
+      setActiveNim(currentUser.nim);
+    }
+  }, [currentUser]);
+
+  // Load activities for activeNim and selectedDate
+  useEffect(() => {
+    if (!activeNim) return;
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    const dayLogs = allLogs[selectedDate] || [];
+    setActivities(dayLogs);
+  }, [activeNim, selectedDate]);
+
+  // Load Rekap (History)
+  useEffect(() => {
+    if (!activeNim) return;
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    const tempRekap = Object.keys(allLogs).map(date => ({
+      date,
+      count: allLogs[date].length,
+      status: allLogs[date].length > 0 ? 'Tersimpan' : 'Draft'
+    })).sort((a, b) => b.date.localeCompare(a.date));
+    setRekap(tempRekap);
+  }, [activeNim, activities]);
+
+  const handleAddRow = () => {
+    if (!kegiatanText.trim() || !outputText.trim()) return;
+    const newAct = {
+      id: String(Date.now()),
+      kegiatan: kegiatanText.trim(),
+      output: outputText.trim(),
+      volume: volumeVal,
+      satuan: satuanVal,
+      bukti_foto_url: photoPreview || '📷 default_foto.jpg'
+    };
+    setActivities(prev => [...prev, newAct]);
+    setKegiatanText('');
+    setOutputText('');
+    setVolumeVal(1);
+    setSatuanVal('kali');
+    setPhotoPreview('');
+  };
+
+  const handleRemoveRow = (id: string) => {
+    setActivities(prev => prev.filter(a => a.id !== id));
+  };
+
+  const handleSaveLogbook = () => {
+    if (!activeNim) return;
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    allLogs[selectedDate] = activities;
+    localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 2000);
+  };
+
+  // Find active member details for header display
+  const activeMember = KKN_MEMBERS.find(m => m.nim === activeNim) || currentUser;
+
+  return (
+    <div className="space-y-6">
+      {/* Header Info */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">Buku Catatan Harian (Logbook KKN Digital)</h2>
+            <p className="text-[10px] text-slate-450 mt-0.5">Pendokumentasian mandiri aktivitas harian mahasiswa KKN Sisdamas.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Member switcher for Admin/DPL/Master account */}
+            {currentUser?.email === 'surveyor@sukahaji-official.id' && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-450 uppercase">Pilih Anggota:</span>
+                <select
+                  value={activeNim}
+                  onChange={(e) => setActiveNim(e.target.value)}
+                  className="rounded-xl border border-slate-250 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-teal-sedang transition font-bold"
+                >
+                  {KKN_MEMBERS.map(m => (
+                    <option key={m.nim} value={m.nim}>{m.name} ({m.division})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="flex items-center gap-2 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold px-4 py-2 cursor-pointer shadow-sm transition"
+            >
+              <Printer className="h-4 w-4" /> Cetak LP2M
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xxs font-semibold text-slate-600">
+          <div className="space-y-1">
+            <span className="font-black text-slate-400 uppercase">Nama Peserta</span>
+            <p className="font-bold text-slate-800 text-xs truncate">{activeMember?.name || '-'}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="font-black text-slate-400 uppercase">NIM / Prodi</span>
+            <p className="font-bold text-slate-800 text-xs truncate">{activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="font-black text-slate-400 uppercase">Fakultas / Divisi</span>
+            <p className="font-bold text-slate-850 text-xs truncate">
+              {activeMember?.fakultas || '-'} / <span className="text-teal-sedang font-black">{activeMember?.division || '-'}</span>
+            </p>
+          </div>
+          <div className="space-y-1">
+            <span className="font-black text-slate-400 uppercase">Kelompok / Lokasi KKN</span>
+            <p className="font-bold text-slate-800 text-xs truncate">Kelompok 56 / Dusun 2, Desa Sukahaji</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Date Picker & Active Logbook Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black text-slate-400 uppercase">Pilih Tanggal:</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 text-xs outline-none focus:border-teal-sedang transition font-bold"
+                />
+              </div>
+              <button
+                onClick={handleSaveLogbook}
+                className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-xs font-bold px-5 py-2 cursor-pointer shadow-sm transition"
+              >
+                {success ? '✓ Berhasil Disimpan' : 'Simpan Logbook'}
+              </button>
+            </div>
+
+            {/* List of current day's activities */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <th className="px-4 py-2 text-center w-12">No</th>
+                    <th className="px-4 py-2">Uraian Kegiatan</th>
+                    <th className="px-4 py-2">Output Kegiatan</th>
+                    <th className="px-4 py-2 text-center w-16">Vol</th>
+                    <th className="px-4 py-2 text-center w-20">Satuan</th>
+                    <th className="px-4 py-2 text-center">Foto Bukti</th>
+                    <th className="px-4 py-2 text-center w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-150 text-xs">
+                  {activities.map((act, index) => (
+                    <tr key={act.id} className="hover:bg-slate-50/50">
+                      <td className="px-4 py-3 text-center font-bold text-slate-400">{index + 1}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">{act.kegiatan}</td>
+                      <td className="px-4 py-3 text-slate-600">{act.output}</td>
+                      <td className="px-4 py-3 text-center font-bold text-teal-tua">{act.volume}</td>
+                      <td className="px-4 py-3 text-center text-slate-500 font-semibold">{act.satuan}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 text-xxs font-bold">
+                          {act.bukti_foto_url.startsWith('data:image') ? '📷 Foto Terlampir' : act.bukti_foto_url}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleRemoveRow(act.id)}
+                          className="text-red-500 hover:text-red-800 font-bold hover:bg-red-50 p-1.5 rounded transition"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {activities.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-medium italic">
+                        Belum ada kegiatan yang dimasukkan untuk tanggal ini. Silakan tambahkan baris kegiatan di bawah.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Quick add activity line row */}
+            <div className="bg-slate-50/70 border border-slate-200/60 p-4 rounded-xl space-y-3 pt-3">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block border-b border-slate-150 pb-1.5">
+                ➕ Tambah Uraian Kegiatan Baru
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Uraian Kegiatan (misal: Rapat koordinasi RW)"
+                  value={kegiatanText}
+                  onChange={(e) => setKegiatanText(e.target.value)}
+                  className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-teal-sedang transition"
+                />
+                <input
+                  type="text"
+                  placeholder="Output Kegiatan (misal: Terbentuknya jadwal ronda)"
+                  value={outputText}
+                  onChange={(e) => setOutputText(e.target.value)}
+                  className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-teal-sedang transition"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-slate-450 uppercase">Volume:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={volumeVal}
+                    onChange={(e) => setVolumeVal(parseInt(e.target.value) || 1)}
+                    className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 w-16 text-xs outline-none focus:border-teal-sedang transition text-center"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-slate-450 uppercase">Satuan:</span>
+                  <select
+                    value={satuanVal}
+                    onChange={(e) => setSatuanVal(e.target.value)}
+                    className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 text-xs outline-none focus:border-teal-sedang transition font-semibold"
+                  >
+                    {['kali', 'unit', 'orang', 'dokumen', 'kegiatan', 'kartu keluarga'].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-[9px] font-bold text-slate-450 uppercase">Foto Bukti:</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setPhotoPreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="text-xxs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xxs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddRow}
+                  className="rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-1.5 text-xs transition self-end cursor-pointer shadow-sm"
+                >
+                  Tambah Baris
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rekap Side Panel */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2">📋 Histori Pengisian Harian</span>
+            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+              {rekap.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setSelectedDate(item.date)}
+                  className={`p-3 rounded-xl border transition cursor-pointer flex justify-between items-center ${
+                    selectedDate === item.date
+                      ? 'bg-emerald-50/50 border-emerald-300 text-emerald-800 shadow-sm'
+                      : 'bg-slate-50/80 border-slate-200 text-slate-700 hover:bg-slate-100/50'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs font-bold font-mono">{new Date(item.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-[9px] text-slate-450 mt-0.5">{item.count} Kegiatan Harian</p>
+                  </div>
+                  <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                    item.status === 'Tersimpan'
+                      ? 'bg-emerald-100 text-emerald-700 border-emerald-250'
+                      : 'bg-amber-100 text-amber-700 border-amber-250'
+                  }`}>
+                    {item.status}
+                  </span>
+                </div>
+              ))}
+              {rekap.length === 0 && (
+                <p className="text-xxs text-slate-400 italic text-center py-4">Belum ada histori logbook.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal Print Preview Document */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-slate-150 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+              <h3 className="font-extrabold text-slate-855 text-xs uppercase tracking-wider">📄 Pratinjau Dokumen Cetak LP2M KKN</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.print();
+                    }
+                  }}
+                  className="rounded-lg bg-teal-sedang hover:bg-[#113a48] text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm"
+                >
+                  Cetak / Simpan PDF
+                </button>
+                <button
+                  onClick={() => setShowPrintModal(false)}
+                  className="rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xxs font-bold px-3 py-1.5 transition cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+
+            {/* Document Printable Sheet */}
+            <div className="p-8 overflow-y-auto flex-1 font-serif text-slate-900 bg-white" id="print-area">
+              {/* PRINT CSS TRICK */}
+              <style>{`
+                @media print {
+                  body * {
+                    visibility: hidden;
+                  }
+                  #print-area, #print-area * {
+                    visibility: visible;
+                  }
+                  #print-area {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    padding: 0;
+                    margin: 0;
+                  }
+                }
+              `}</style>
+
+              <div className="text-center space-y-1.5 pb-6 border-b-2 border-slate-900">
+                <h2 className="text-md font-bold uppercase tracking-wider text-slate-900">BUKU CATATAN HARIAN (LOGBOOK)</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-900">KULIAH KERJA NYATA (KKN) REGULER SISDAMAS</h2>
+                <h3 className="text-xs font-semibold text-slate-850">UIN SUNAN GUNUNG DJATI BANDUNG - TAHUN AKADEMIK 2025/2026</h3>
+              </div>
+
+              {/* Identity Form */}
+              <div className="grid grid-cols-2 gap-4 py-4 text-[11px] font-sans border-b border-slate-300 text-slate-800">
+                <div className="space-y-1">
+                  <p><strong>Nama Peserta:</strong> {activeMember?.name || '-'}</p>
+                  <p><strong>NIM / Prodi:</strong> {activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</p>
+                  <p><strong>Fakultas / Divisi:</strong> {activeMember?.fakultas || '-'} / {activeMember?.division || '-'}</p>
+                </div>
+                <div className="space-y-1 text-right md:text-left">
+                  <p><strong>Kelompok / Dusun:</strong> Kelompok 56 / Dusun 2</p>
+                  <p><strong>Desa / Kecamatan:</strong> Sukahaji / Cipeundeuy</p>
+                  <p><strong>Kabupaten / Provinsi:</strong> Bandung Barat / Jawa Barat</p>
+                </div>
+              </div>
+
+              {/* Table Data list */}
+              <div className="mt-6">
+                <h4 className="text-xs font-bold uppercase tracking-wider mb-2 font-sans text-slate-800">
+                  Entri Kegiatan Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </h4>
+                <table className="w-full border-collapse border border-slate-800 text-[11px] text-slate-900">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="border border-slate-800 px-3 py-2 text-center w-12 font-sans font-bold">No</th>
+                      <th className="border border-slate-800 px-3 py-2 text-left font-sans font-bold">Uraian Aktivitas/Kegiatan</th>
+                      <th className="border border-slate-800 px-3 py-2 text-left font-sans font-bold">Output / Hasil Kegiatan</th>
+                      <th className="border border-slate-800 px-3 py-2 text-center w-16 font-sans font-bold">Volume</th>
+                      <th className="border border-slate-800 px-3 py-2 text-center w-20 font-sans font-bold">Satuan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activities.map((act, idx) => (
+                      <tr key={act.id}>
+                        <td className="border border-slate-800 px-3 py-2 text-center font-bold font-sans">{idx + 1}</td>
+                        <td className="border border-slate-800 px-3 py-2">{act.kegiatan}</td>
+                        <td className="border border-slate-800 px-3 py-2">{act.output}</td>
+                        <td className="border border-slate-800 px-3 py-2 text-center font-bold font-sans">{act.volume}</td>
+                        <td className="border border-slate-800 px-3 py-2 text-center font-sans">{act.satuan}</td>
+                      </tr>
+                    ))}
+                    {activities.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="border border-slate-800 px-3 py-6 text-center italic text-slate-500 font-sans">
+                          Tidak ada data kegiatan KKN untuk tanggal ini.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Signatures Blocks */}
+              <div className="mt-12 grid grid-cols-2 gap-8 text-[11px] font-sans text-slate-800">
+                <div className="space-y-16">
+                  <p>Bandung Barat, ........................ 2026</p>
+                  <div>
+                    <p className="font-bold underline">{activeMember?.name}</p>
+                    <p>NIM. {activeMember?.nim}</p>
+                    <p className="text-[10px] text-teal-sedang font-bold">{activeMember?.division}</p>
+                  </div>
+                </div>
+                <div className="space-y-16 text-right md:text-left">
+                  <p>Mengetahui,</p>
+                  <div>
+                    <p className="font-bold underline">Arpan Maulana</p>
+                    <p>Ketua Kelompok 56</p>
+                    <p>NIM. 1231030055</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mengetahui DPL Block */}
+              <div className="mt-12 text-center text-[11px] font-sans border-t border-slate-200 pt-6 text-slate-850">
+                <p>Mengetahui,</p>
+                <p className="font-semibold">Dosen Pembimbing Lapangan (DPL) Kelompok 56</p>
+                <div className="h-16"></div>
+                <p className="font-bold underline">Dr. Hj. Yani Heryani, M.Ag.</p>
+                <p>NIP. 197207101998021001</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
 // SUB-VIEW 5: Priority View Component
 // -------------------------------------------------------------
 function PriorityView() {
-  const [items, setItems] = useState<PriorityItem[]>(INITIAL_PROBLEMS);
+  const [method, setMethod] = useState<'usg' | 'abcd'>('usg');
+  const [items, setItems] = useState<PriorityItem[]>([]);
   const [success, setSuccess] = useState(false);
+  
+  // Custom problem adding
+  const [newProbText, setNewProbText] = useState('');
+  const [newProbCat, setNewProbCat] = useState('Infrastruktur');
+  const [newProbRt, setNewProbRt] = useState('RT 01 / RW 01');
 
-  const handleScore = (id: string, field: 'urgency' | 'seriousness' | 'growth', val: number) => {
+  // Load items from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sukahaji_priority_items');
+    if (saved) {
+      setItems(JSON.parse(saved));
+    } else {
+      // Map INITIAL_PROBLEMS to have default ABCD scores and alternative descriptions
+      const mapped = INITIAL_PROBLEMS.map((prob: any) => ({
+        ...prob,
+        a_score: prob.urgency || 3,
+        b_score: prob.seriousness || 3,
+        c_score: prob.growth || 3,
+        d_score: 3,
+        total_score_abcd: (prob.urgency || 3) + (prob.seriousness || 3) + (prob.growth || 3) + 3,
+        potensi_uraian: 'Swadaya gotong royong warga desa',
+        alt_mandiri: 'Kerja bakti pembersihan/perbaikan mandiri',
+        alt_dukungan_luar: 'Pengajuan proposal bantuan material',
+        alt_bantuan_luar: 'Bantuan dinas terkait/dana desa'
+      }));
+      setItems(mapped);
+      localStorage.setItem('sukahaji_priority_items', JSON.stringify(mapped));
+    }
+  }, []);
+
+  const handleScoreUSG = (id: string, field: 'urgency' | 'seriousness' | 'growth', val: number) => {
     setItems((prev) => {
       const updated = prev.map((item) => {
         if (item.id === id) {
@@ -1762,70 +2519,403 @@ function PriorityView() {
         }
         return item;
       });
+      // Sort for USG ranks
       const sorted = [...updated].sort((a, b) => b.total_score - a.total_score);
-      return updated.map((item) => ({
+      const reranked = updated.map((item) => ({
         ...item,
         rank: sorted.findIndex((s) => s.id === item.id) + 1
       }));
+      localStorage.setItem('sukahaji_priority_items', JSON.stringify(reranked));
+      return reranked;
     });
   };
 
-  const sortedItems = [...items].sort((a, b) => (a.rank || 9) - (b.rank || 9));
+  const handleScoreABCD = (id: string, field: 'a_score' | 'b_score' | 'c_score' | 'd_score', val: number) => {
+    setItems((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id === id) {
+          const newA = field === 'a_score' ? val : (item.a_score || 3);
+          const newB = field === 'b_score' ? val : (item.b_score || 3);
+          const newC = field === 'c_score' ? val : (item.c_score || 3);
+          const newD = field === 'd_score' ? val : (item.d_score || 3);
+          return {
+            ...item,
+            a_score: newA,
+            b_score: newB,
+            c_score: newC,
+            d_score: newD,
+            total_score_abcd: newA + newB + newC + newD
+          };
+        }
+        return item;
+      });
+      // Sort for ABCD ranks
+      const sorted = [...updated].sort((a, b) => (b.total_score_abcd || 12) - (a.total_score_abcd || 12));
+      const reranked = updated.map((item) => ({
+        ...item,
+        rank_abcd: sorted.findIndex((s) => s.id === item.id) + 1
+      }));
+      localStorage.setItem('sukahaji_priority_items', JSON.stringify(reranked));
+      return reranked;
+    });
+  };
+
+  const handleUpdateAlternatif = (id: string, field: 'potensi_uraian' | 'alt_mandiri' | 'alt_dukungan_luar' | 'alt_bantuan_luar', val: string) => {
+    setItems((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id === id) {
+          return { ...item, [field]: val };
+        }
+        return item;
+      });
+      localStorage.setItem('sukahaji_priority_items', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleAddProblem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProbText.trim()) return;
+    
+    const newProb: PriorityItem = {
+      id: `prob-custom-${Date.now()}`,
+      problem_text: newProbText.trim(),
+      category: newProbCat,
+      rt_label: newProbRt,
+      urgency: 3,
+      seriousness: 3,
+      growth: 3,
+      total_score: 9,
+      a_score: 3,
+      b_score: 3,
+      c_score: 3,
+      d_score: 3,
+      total_score_abcd: 12,
+      potensi_uraian: '',
+      alt_mandiri: '',
+      alt_dukungan_luar: '',
+      alt_bantuan_luar: ''
+    };
+
+    setItems((prev) => {
+      const updated = [...prev, newProb];
+      // Sort both USG and ABCD
+      const sortedUSG = [...updated].sort((a, b) => b.total_score - a.total_score);
+      const sortedABCD = [...updated].sort((a, b) => (b.total_score_abcd || 12) - (a.total_score_abcd || 12));
+      
+      const finalized = updated.map((item) => ({
+        ...item,
+        rank: sortedUSG.findIndex((s) => s.id === item.id) + 1,
+        rank_abcd: sortedABCD.findIndex((s) => s.id === item.id) + 1
+      }));
+      localStorage.setItem('sukahaji_priority_items', JSON.stringify(finalized));
+      return finalized;
+    });
+
+    setNewProbText('');
+  };
+
+  const handleSaveAll = () => {
+    localStorage.setItem('sukahaji_priority_items', JSON.stringify(items));
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 2000);
+  };
+
+  const sortedUSGItems = [...items].sort((a, b) => (a.rank || 9) - (b.rank || 9));
+  const sortedABCDItems = [...items].sort((a, b) => (a.rank_abcd || 9) - (b.rank_abcd || 9));
 
   return (
-    <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 className="font-bold text-slate-800 text-sm">Matriks Skoring Prioritas Kerja (USG)</h3>
-        <button
-          onClick={() => {
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 2000);
-          }}
-          className="rounded bg-teal-sedang hover:bg-kabut text-white font-semibold px-4 py-2 text-xs"
-        >
-          {success ? 'Tersimpan!' : 'Simpan Matrix'}
-        </button>
+    <div className="space-y-6">
+      {/* Method selector toggle */}
+      <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
+        <div>
+          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+            Siklus 3: Klasifikasi & Prioritas Pokok Masalah
+          </h2>
+          <p className="text-[10px] text-slate-455 mt-0.5">
+            Pilihlah metode prioritas yang ingin digunakan di bawah ini untuk menilai pokok masalah desa.
+          </p>
+        </div>
+        <div className="flex gap-2 bg-slate-200/60 p-1 rounded-xl">
+          <button
+            onClick={() => setMethod('usg')}
+            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              method === 'usg' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Metode USG
+          </button>
+          <button
+            onClick={() => setMethod('abcd')}
+            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              method === 'abcd' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Metode ABCD (KKN)
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
-              <th className="px-4 py-3 text-center">Rank</th>
-              <th className="px-4 py-3">Deskripsi Masalah</th>
-              <th className="px-4 py-3 text-center">Urgency</th>
-              <th className="px-4 py-3 text-center">Seriousness</th>
-              <th className="px-4 py-3 text-center">Growth</th>
-              <th className="px-4 py-3 text-center">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-150 text-xs">
-            {sortedItems.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-center font-bold text-teal-tua">{item.rank}</td>
-                <td className="px-4 py-3 font-semibold text-slate-700">{item.problem_text}</td>
-                {/* FIX: Ensure high contrast text colors inside form select dropdowns and text inputs */}
-                <td className="px-4 py-3 text-center">
-                  <select value={item.urgency} onChange={(e) => handleScore(item.id, 'urgency', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
-                    {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <select value={item.seriousness} onChange={(e) => handleScore(item.id, 'seriousness', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
-                    {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <select value={item.growth} onChange={(e) => handleScore(item.id, 'growth', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
-                    {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </td>
-                <td className="px-4 py-3 text-center font-extrabold text-teal-sedang">{item.total_score}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {method === 'usg' ? (
+        <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm">Matriks Skoring Prioritas Kerja (USG)</h3>
+              <p className="text-xxs text-slate-455 mt-0.5">Urgency (U), Seriousness (S), Growth (G). Rentang nilai 1-5.</p>
+            </div>
+            <button
+              onClick={handleSaveAll}
+              className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white font-bold px-5 py-2 text-xs transition cursor-pointer shadow-sm"
+            >
+              {success ? '✓ Tersimpan!' : 'Simpan Matrix'}
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
+                  <th className="px-4 py-3 text-center">Rank</th>
+                  <th className="px-4 py-3">Deskripsi Pokok Masalah</th>
+                  <th className="px-4 py-3 text-center">Urgency</th>
+                  <th className="px-4 py-3 text-center">Seriousness</th>
+                  <th className="px-4 py-3 text-center">Growth</th>
+                  <th className="px-4 py-3 text-center">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
+                {sortedUSGItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-center font-bold text-teal-tua">{item.rank}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-800">{item.problem_text} <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold">{item.rt_label}</span></td>
+                    <td className="px-4 py-3 text-center">
+                      <select value={item.urgency} onChange={(e) => handleScoreUSG(item.id, 'urgency', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                        {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <select value={item.seriousness} onChange={(e) => handleScoreUSG(item.id, 'seriousness', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                        {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <select value={item.growth} onChange={(e) => handleScoreUSG(item.id, 'growth', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                        {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-center font-extrabold text-teal-sedang">{item.total_score}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* TABEL 1: Skoring ABCD */}
+          <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm">TABEL 1. Penentuan Pokok Masalah (Skoring Prioritas ABCD)</h3>
+                <p className="text-xxs text-slate-455 mt-0.5">Berikan nilai 1-5 pada masing-masing kriteria. Jumlah skor = A + B + C + D.</p>
+              </div>
+              <button
+                onClick={handleSaveAll}
+                className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white font-bold px-5 py-2 text-xs transition cursor-pointer shadow-sm"
+              >
+                {success ? '✓ Tersimpan!' : 'Simpan Matrix'}
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
+                    <th className="px-4 py-3 text-center w-16">Peringkat</th>
+                    <th className="px-4 py-3">Pokok Masalah</th>
+                    <th className="px-3 py-3 text-center">Kriteria A</th>
+                    <th className="px-3 py-3 text-center">Kriteria B</th>
+                    <th className="px-3 py-3 text-center">Kriteria C</th>
+                    <th className="px-3 py-3 text-center">Kriteria D</th>
+                    <th className="px-4 py-3 text-center">Jumlah Skor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
+                  {sortedABCDItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-center font-bold text-teal-tua">{item.rank_abcd || 1}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-855">
+                        {item.problem_text}
+                        <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold">{item.rt_label}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <select value={item.a_score || 3} onChange={(e) => handleScoreABCD(item.id, 'a_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                          {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <select value={item.b_score || 3} onChange={(e) => handleScoreABCD(item.id, 'b_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                          {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <select value={item.c_score || 3} onChange={(e) => handleScoreABCD(item.id, 'c_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                          {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <select value={item.d_score || 3} onChange={(e) => handleScoreABCD(item.id, 'd_score', parseInt(e.target.value))} className="rounded border border-slate-300 text-slate-900 bg-white px-2 py-1 text-xs">
+                          {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-center font-extrabold text-teal-sedang">{item.total_score_abcd || 12}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Info Kriteria Penjelasan */}
+            <div className="bg-slate-50 border border-slate-200/50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-4 gap-4 text-xxs font-semibold">
+              <div className="space-y-1">
+                <span className="font-bold text-teal-tua uppercase">Kriteria A</span>
+                <p className="text-slate-500">Menimbulkan masalah lain bila tidak diselesaikan.</p>
+              </div>
+              <div className="space-y-1">
+                <span className="font-bold text-teal-tua uppercase">Kriteria B</span>
+                <p className="text-slate-500">Mendesak untuk segera diatasi.</p>
+              </div>
+              <div className="space-y-1">
+                <span className="font-bold text-teal-tua uppercase">Kriteria C</span>
+                <p className="text-slate-500">Menjadi kebutuhan mayoritas masyarakat desa.</p>
+              </div>
+              <div className="space-y-1">
+                <span className="font-bold text-teal-tua uppercase">Kriteria D</span>
+                <p className="text-slate-500">Memiliki potensi sumber daya masyarakat untuk diselesaikan.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* TABEL 2: Alternatif Penyelesaian */}
+          <div className="bg-white rounded-xl border border-slate-300/60 p-6 shadow-sm space-y-6">
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm">TABEL 2. Alternatif Penyelesaian Masalah</h3>
+              <p className="text-xxs text-slate-455 mt-0.5">Uraikan potensi dan alternatif solusi berdasarkan urutan masalah prioritas (Tabel 1).</p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-xxs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-300/60">
+                    <th className="px-3 py-3 w-16 text-center">Rank</th>
+                    <th className="px-3 py-3 w-1/4">Pokok Masalah (Prioritas)</th>
+                    <th className="px-3 py-3">Uraian Potensi Penyelesaian</th>
+                    <th className="px-3 py-3">1. Mandiri (Swadaya Warga)</th>
+                    <th className="px-3 py-3">2. Dukungan Luar (Semi-Mandiri)</th>
+                    <th className="px-3 py-3">3. Memerlukan Bantuan Luar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-150 text-xs text-slate-700">
+                  {sortedABCDItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50">
+                      <td className="px-3 py-3 text-center font-bold text-teal-tua">{item.rank_abcd || 1}</td>
+                      <td className="px-3 py-3 font-semibold text-slate-800">
+                        {item.problem_text}
+                        <p className="text-[9px] text-slate-400 font-bold mt-0.5">{item.rt_label}</p>
+                      </td>
+                      <td className="px-2 py-2">
+                        <textarea
+                          rows={2}
+                          value={item.potensi_uraian || ''}
+                          onChange={(e) => handleUpdateAlternatif(item.id, 'potensi_uraian', e.target.value)}
+                          placeholder="Potensi yang dimiliki..."
+                          className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <textarea
+                          rows={2}
+                          value={item.alt_mandiri || ''}
+                          onChange={(e) => handleUpdateAlternatif(item.id, 'alt_mandiri', e.target.value)}
+                          placeholder="Solusi masyarakat..."
+                          className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <textarea
+                          rows={2}
+                          value={item.alt_dukungan_luar || ''}
+                          onChange={(e) => handleUpdateAlternatif(item.id, 'alt_dukungan_luar', e.target.value)}
+                          placeholder="Bentuk dukungan..."
+                          className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <textarea
+                          rows={2}
+                          value={item.alt_bantuan_luar || ''}
+                          onChange={(e) => handleUpdateAlternatif(item.id, 'alt_bantuan_luar', e.target.value)}
+                          placeholder="Bantuan instansi..."
+                          className="w-full rounded border border-slate-200 bg-white p-1 text-[10px] text-slate-800 outline-none focus:border-teal-sedang resize-none"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add custom problem form */}
+      <form onSubmit={handleAddProblem} className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+        <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center gap-2">
+          <PlusCircle className="h-4 w-4 text-teal-sedang" /> Tambah Pokok Masalah Baru
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="md:col-span-2">
+            <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Deskripsi Pokok Masalah</label>
+            <input
+              type="text"
+              required
+              placeholder="Tulis pokok masalah yang diidentifikasi..."
+              value={newProbText}
+              onChange={(e) => setNewProbText(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-medium"
+            />
+          </div>
+          <div>
+            <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Kategori & RT Wilayah</label>
+            <div className="flex gap-2">
+              <select
+                value={newProbCat}
+                onChange={(e) => setNewProbCat(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
+              >
+                {['Infrastruktur', 'Lingkungan', 'Ekonomi', 'Kesehatan', 'Pendidikan', 'Sosial'].map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="RT 01 / RW 01"
+                value={newProbRt}
+                onChange={(e) => setNewProbRt(e.target.value)}
+                className="w-24 rounded-lg border border-slate-200 bg-white text-slate-900 px-2 py-2 text-xs outline-none focus:border-teal-sedang text-center font-bold"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            className="rounded-xl bg-[#092430] hover:bg-[#113a48] text-white text-xs font-bold px-6 py-2.5 shadow cursor-pointer transition"
+          >
+            Tambah ke Matriks Skoring
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
