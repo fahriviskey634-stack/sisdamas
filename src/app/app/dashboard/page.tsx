@@ -2469,21 +2469,19 @@ function LogbookView({ currentUser }: { currentUser: any }) {
 
               {/* Signatures Blocks */}
               <div className="mt-12 grid grid-cols-2 gap-8 text-[12pt] text-black">
-                <div className="space-y-16">
+                <div>
                   <p>Bandung Barat, ........................ 2026</p>
-                  <div>
-                    <p className="font-bold underline">{activeMember?.name}</p>
-                    <p>NIM. {activeMember?.nim}</p>
-                    <p className="text-[11pt] font-bold">{activeMember?.division}</p>
-                  </div>
+                  <p className="font-bold">Peserta KKN,</p>
+                  <div className="h-16"></div>
+                  <p className="font-bold underline">{activeMember?.name}</p>
+                  <p>NIM. {activeMember?.nim}</p>
                 </div>
-                <div className="space-y-16 text-right md:text-left">
+                <div className="text-right md:text-left">
                   <p>Mengetahui,</p>
-                  <div>
-                    <p className="font-bold underline">Arpan Maulana</p>
-                    <p>Ketua Kelompok 56</p>
-                    <p>NIM. 1231030055</p>
-                  </div>
+                  <p className="font-bold">Ketua Kelompok 56,</p>
+                  <div className="h-16"></div>
+                  <p className="font-bold underline">Arpan Maulana</p>
+                  <p>NIM. 1231030055</p>
                 </div>
               </div>
 
