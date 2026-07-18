@@ -2352,15 +2352,20 @@ function LogbookView({ currentUser }: { currentUser: any }) {
             </div>
 
             {/* Document Printable Sheet */}
-            <div className="p-8 overflow-y-auto flex-1 font-serif text-slate-900 bg-white" id="print-area">
+            <div className="p-8 overflow-y-auto flex-1 bg-white" id="print-area">
               {/* PRINT CSS TRICK */}
               <style>{`
+                @page {
+                  margin: 2cm;
+                }
                 @media print {
                   body * {
                     visibility: hidden;
                   }
                   #print-area, #print-area * {
                     visibility: visible;
+                    font-family: "Times New Roman", Times, serif !important;
+                    color: #000000 !important;
                   }
                   #print-area {
                     position: absolute;
@@ -2369,18 +2374,51 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                     width: 100%;
                     padding: 0;
                     margin: 0;
+                    font-size: 12pt !important;
                   }
+                  #print-area a {
+                    color: #000000 !important;
+                    text-decoration: none !important;
+                  }
+                  #print-area table {
+                    border: 1px solid #000000 !important;
+                    border-collapse: collapse !important;
+                    width: 100% !important;
+                  }
+                  #print-area th, #print-area td {
+                    border: 1px solid #000000 !important;
+                    padding: 8px 10px !important;
+                    color: #000000 !important;
+                  }
+                }
+                /* Screen style mirroring */
+                #print-area {
+                  font-family: "Times New Roman", Times, serif !important;
+                  color: #000000 !important;
+                  font-size: 12pt !important;
+                }
+                #print-area * {
+                  font-family: "Times New Roman", Times, serif !important;
+                  color: #000000 !important;
+                }
+                #print-area table {
+                  border: 1px solid #000000 !important;
+                  border-collapse: collapse !important;
+                }
+                #print-area th, #print-area td {
+                  border: 1px solid #000000 !important;
+                  padding: 8px 10px !important;
                 }
               `}</style>
 
-              <div className="text-center space-y-1.5 pb-6 border-b-2 border-slate-900">
-                <h2 className="text-md font-bold uppercase tracking-wider text-slate-900">BUKU CATATAN HARIAN (LOGBOOK)</h2>
-                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-900">KULIAH KERJA NYATA (KKN) REGULER SISDAMAS</h2>
-                <h3 className="text-xs font-semibold text-slate-850">UIN SUNAN GUNUNG DJATI BANDUNG - TAHUN AKADEMIK 2025/2026</h3>
+              <div className="text-center space-y-1.5 pb-6 border-b-2 border-black">
+                <h2 className="text-md font-bold uppercase tracking-wider">BUKU CATATAN HARIAN (LOGBOOK)</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wide">KULIAH KERJA NYATA (KKN) REGULER SISDAMAS</h2>
+                <h3 className="text-xs font-semibold">UIN SUNAN GUNUNG DJATI BANDUNG - TAHUN AKADEMIK 2025/2026</h3>
               </div>
 
               {/* Identity Form */}
-              <div className="grid grid-cols-2 gap-4 py-4 text-[11px] font-sans border-b border-slate-300 text-slate-800">
+              <div className="grid grid-cols-2 gap-4 py-4 text-[12pt] border-b border-black text-black">
                 <div className="space-y-1">
                   <p><strong>Nama Peserta:</strong> {activeMember?.name || '-'}</p>
                   <p><strong>NIM / Prodi:</strong> {activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</p>
@@ -2395,32 +2433,32 @@ function LogbookView({ currentUser }: { currentUser: any }) {
 
               {/* Table Data list */}
               <div className="mt-6">
-                <h4 className="text-xs font-bold uppercase tracking-wider mb-2 font-sans text-slate-800">
+                <h4 className="text-[12pt] font-bold uppercase tracking-wider mb-2 text-black">
                   Entri Kegiatan Tanggal: {new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </h4>
-                <table className="w-full border-collapse border border-slate-800 text-[11px] text-slate-900">
+                <table className="w-full border-collapse border border-black text-[12pt] text-black">
                   <thead>
-                    <tr className="bg-slate-100">
-                      <th className="border border-slate-800 px-3 py-2 text-center w-12 font-sans font-bold">No</th>
-                      <th className="border border-slate-800 px-3 py-2 text-left font-sans font-bold">Uraian Aktivitas/Kegiatan</th>
-                      <th className="border border-slate-800 px-3 py-2 text-left font-sans font-bold">Output / Hasil Kegiatan</th>
-                      <th className="border border-slate-800 px-3 py-2 text-center w-16 font-sans font-bold">Volume</th>
-                      <th className="border border-slate-800 px-3 py-2 text-center w-20 font-sans font-bold">Satuan</th>
+                    <tr className="bg-transparent">
+                      <th className="border border-black px-3 py-2 text-center w-12 font-bold">No</th>
+                      <th className="border border-black px-3 py-2 text-left font-bold">Uraian Aktivitas/Kegiatan</th>
+                      <th className="border border-black px-3 py-2 text-left font-bold">Output / Hasil Kegiatan</th>
+                      <th className="border border-black px-3 py-2 text-center w-16 font-bold">Volume</th>
+                      <th className="border border-black px-3 py-2 text-center w-20 font-bold">Satuan</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activities.map((act, idx) => (
                       <tr key={act.id}>
-                        <td className="border border-slate-800 px-3 py-2 text-center font-bold font-sans">{idx + 1}</td>
-                        <td className="border border-slate-800 px-3 py-2">{act.kegiatan}</td>
-                        <td className="border border-slate-800 px-3 py-2">{act.output}</td>
-                        <td className="border border-slate-800 px-3 py-2 text-center font-bold font-sans">{act.volume}</td>
-                        <td className="border border-slate-800 px-3 py-2 text-center font-sans">{act.satuan}</td>
+                        <td className="border border-black px-3 py-2 text-center font-bold">{idx + 1}</td>
+                        <td className="border border-black px-3 py-2">{act.kegiatan}</td>
+                        <td className="border border-black px-3 py-2">{act.output}</td>
+                        <td className="border border-black px-3 py-2 text-center font-bold">{act.volume}</td>
+                        <td className="border border-black px-3 py-2 text-center">{act.satuan}</td>
                       </tr>
                     ))}
                     {activities.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="border border-slate-800 px-3 py-6 text-center italic text-slate-500 font-sans">
+                        <td colSpan={5} className="border border-black px-3 py-6 text-center italic text-black">
                           Tidak ada data kegiatan KKN untuk tanggal ini.
                         </td>
                       </tr>
@@ -2430,13 +2468,13 @@ function LogbookView({ currentUser }: { currentUser: any }) {
               </div>
 
               {/* Signatures Blocks */}
-              <div className="mt-12 grid grid-cols-2 gap-8 text-[11px] font-sans text-slate-800">
+              <div className="mt-12 grid grid-cols-2 gap-8 text-[12pt] text-black">
                 <div className="space-y-16">
                   <p>Bandung Barat, ........................ 2026</p>
                   <div>
                     <p className="font-bold underline">{activeMember?.name}</p>
                     <p>NIM. {activeMember?.nim}</p>
-                    <p className="text-[10px] text-teal-sedang font-bold">{activeMember?.division}</p>
+                    <p className="text-[11pt] font-bold">{activeMember?.division}</p>
                   </div>
                 </div>
                 <div className="space-y-16 text-right md:text-left">
@@ -2450,7 +2488,7 @@ function LogbookView({ currentUser }: { currentUser: any }) {
               </div>
 
               {/* Mengetahui DPL Block */}
-              <div className="mt-12 text-center text-[11px] font-sans border-t border-slate-200 pt-6 text-slate-850">
+              <div className="mt-12 text-center text-[12pt] border-t border-black pt-6 text-black">
                 <p>Mengetahui,</p>
                 <p className="font-semibold">Dosen Pembimbing Lapangan (DPL) Kelompok 56</p>
                 <div className="h-16"></div>
