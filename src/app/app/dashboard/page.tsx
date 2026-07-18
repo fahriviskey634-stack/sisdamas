@@ -2077,13 +2077,23 @@ function LogbookView({ currentUser }: { currentUser: any }) {
     setActivities(prev => prev.filter(a => a.id !== id));
   };
 
-  const handleSaveLogbook = () => {
+  const handleSaveLogbook = async () => {
     if (!activeNim) return;
     const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
     allLogs[selectedDate] = activities;
     localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2000);
+
+    try {
+      await fetch('/api/sync/logbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nim: activeNim, logbookData: allLogs })
+      });
+    } catch (e) {
+      console.warn("Background logbook sync failed, saved locally:", e);
+    }
   };
 
   // Find active member details for header display
@@ -2331,17 +2341,63 @@ function LogbookView({ currentUser }: { currentUser: any }) {
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-150 flex justify-between items-center bg-slate-50 rounded-t-2xl">
               <h3 className="font-extrabold text-slate-855 text-xs uppercase tracking-wider">📄 Pratinjau Dokumen Cetak LP2M KKN</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
                     if (typeof window !== 'undefined') {
                       window.print();
                     }
                   }}
-                  className="rounded-lg bg-teal-sedang hover:bg-[#113a48] text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm"
+                  className="rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm"
                 >
-                  Cetak / Simpan PDF
+                  Cetak Browser
                 </button>
+                <a
+                  href={`/api/export/logbook?user_id=${activeNim}&start_date=${selectedDate}&end_date=${selectedDate}&format=pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                >
+                  Unduh PDF (Hari Ini)
+                </a>
+                <a
+                  href={`/api/export/logbook?user_id=${activeNim}&start_date=${selectedDate}&end_date=${selectedDate}&format=docx`}
+                  className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                >
+                  Unduh Word (Hari Ini)
+                </a>
+                <a
+                  href={`/api/export/logbook?user_id=${activeNim}&format=pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                >
+                  Unduh PDF (Semua)
+                </a>
+                <a
+                  href={`/api/export/logbook?user_id=${activeNim}&format=docx`}
+                  className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                >
+                  Unduh Word (Semua)
+                </a>
+                {activeNim === '1231030055' && (
+                  <>
+                    <a
+                      href={`/api/export/logbook-kelompok?format=pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                    >
+                      Unduh LPJ Gabungan (PDF)
+                    </a>
+                    <a
+                      href={`/api/export/logbook-kelompok?format=docx`}
+                      className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                    >
+                      Unduh LPJ Gabungan (Word)
+                    </a>
+                  </>
+                )}
                 <button
                   onClick={() => setShowPrintModal(false)}
                   className="rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xxs font-bold px-3 py-1.5 transition cursor-pointer"
