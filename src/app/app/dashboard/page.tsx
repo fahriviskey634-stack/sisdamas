@@ -417,6 +417,19 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
   const [syncingCalendar, setSyncingCalendar] = useState(false);
   const [calendarSyncResult, setCalendarSyncResult] = useState<any>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [googleCalendarId, setGoogleCalendarId] = useState<string>('primary');
+
+  // Fetch Google Calendar ID dynamically
+  useEffect(() => {
+    fetch('/api/google/calendar/id')
+      .then(res => res.json())
+      .then(data => {
+        if (data.calendarId) {
+          setGoogleCalendarId(data.calendarId);
+        }
+      })
+      .catch(err => console.error("Failed to load Calendar ID", err));
+  }, []);
 
   // Detailed mock surveys seed matching exactly the 82 completed surveys
   useEffect(() => {
@@ -781,7 +794,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
 
           <div className="w-full h-[450px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 relative">
             <iframe
-              src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID || 'primary')}&ctz=Asia%2FJakarta`}
+              src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(googleCalendarId)}&ctz=Asia%2FJakarta`}
               style={{ border: 0 }}
               className="w-full h-full absolute inset-0"
               frameBorder="0"
