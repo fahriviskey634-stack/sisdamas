@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Camera, Navigation, AlertTriangle, CheckCircle, Plus, Info, Tag, Key, Shield, ArrowLeft, ArrowRight, BookOpen, Printer, Menu, X } from 'lucide-react';
+import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Camera, Navigation, AlertTriangle, CheckCircle, Plus, Info, Tag, Key, Shield, ArrowLeft, ArrowRight, BookOpen, Printer, Menu, X, Edit } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
 
@@ -303,7 +303,7 @@ function DashboardSPA() {
               <BookOpen className="h-4.5 w-4.5" /> Logbook Harian KKN
             </button>
 
-            <button
+             <button
               onClick={() => switchTab('siklus-4')}
               className={`flex items-center gap-3.5 w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 transform hover:translate-x-1 ${
                 currentTab === 'siklus-4'
@@ -312,6 +312,17 @@ function DashboardSPA() {
               }`}
             >
               <Activity className="h-4.5 w-4.5" /> Siklus 4: Rencana & Evaluasi
+            </button>
+
+            <button
+              onClick={() => switchTab('dokumentasi')}
+              className={`flex items-center gap-3.5 w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 transform hover:translate-x-1 ${
+                currentTab === 'dokumentasi'
+                  ? 'bg-gradient-to-r from-[#194A5B] to-[#407F8F] text-white shadow-md shadow-[#092430]/60 border-l-4 border-[#D9CBB0]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Camera className="h-4.5 w-4.5" /> Dokumentasi & Galeri
             </button>
 
             <button
@@ -368,6 +379,7 @@ function DashboardSPA() {
               {currentTab === 'priority' && 'Siklus 3: Klasifikasi & Skoring Prioritas'}
               {currentTab === 'logbook' && 'Buku Harian: Logbook KKN'}
               {currentTab === 'siklus-4' && 'Siklus 4: Program Kerja & Evaluasi'}
+              {currentTab === 'dokumentasi' && 'Dokumentasi & Galeri Foto KKN'}
               {currentTab === 'profile' && 'Profil & Pengaturan Platform'}
             </h1>
           </div>
@@ -405,6 +417,7 @@ function DashboardSPA() {
           {currentTab === 'priority' && <PriorityView />}
           {currentTab === 'logbook' && <LogbookView currentUser={currentUser} />}
           {currentTab === 'siklus-4' && <Siklus4View />}
+          {currentTab === 'dokumentasi' && <DokumentasiGalleryView />}
           {currentTab === 'profile' && (
             <ProfileView 
               handleLogout={handleLogout} 
@@ -1244,6 +1257,7 @@ function Siklus4View() {
   const [newEval, setNewEval] = useState('');
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [editingProg, setEditingProg] = useState<any | null>(null);
 
   // Load programs & priority problems from localStorage
   useEffect(() => {
@@ -1265,6 +1279,42 @@ function Siklus4View() {
       setPrograms(JSON.parse(savedProgs));
     }
   }, []);
+
+  const handleStartEdit = (prog: any) => {
+    setEditingProg(prog);
+    setNewName(prog.name);
+    setNewPriority(prog.priorityName);
+    setNewVolume(prog.volume);
+    setNewFrequency(prog.frequency);
+    setNewLocation(prog.location);
+    setNewTarget(prog.target);
+    setNewBudget(prog.budget);
+    setNewPic(prog.pic);
+    setNewStatus(prog.status);
+    setNewProgress(prog.progress);
+    setNewDesc(prog.description || '');
+    setNewEval(prog.evaluation || '');
+    setNewPhotos([]);
+    setShowAddForm(true);
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelForm = () => {
+    setNewName('');
+    setNewVolume('');
+    setNewFrequency('');
+    setNewLocation('');
+    setNewTarget('');
+    setNewBudget('');
+    setNewDesc('');
+    setNewEval('');
+    setNewProgress(0);
+    setNewStatus('Planned');
+    setNewPhotos([]);
+    setEditingProg(null);
+    setShowAddForm(false);
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -1289,26 +1339,50 @@ function Siklus4View() {
       }
     }
 
-    const newProg = {
-      id: String(Date.now()),
-      name: newName,
-      priorityName: newPriority,
-      volume: newVolume || '-',
-      frequency: newFrequency || '-',
-      location: newLocation || '-',
-      target: newTarget || '-',
-      budget: newBudget || '-',
-      pic: newPic,
-      status: newStatus,
-      progress: Number(newProgress) || 0,
-      description: newDesc,
-      evaluation: newEval,
-      photo_urls: uploadedUrls
-    };
+    if (editingProg) {
+      const updatedProg = {
+        ...editingProg,
+        name: newName,
+        priorityName: newPriority,
+        volume: newVolume || '-',
+        frequency: newFrequency || '-',
+        location: newLocation || '-',
+        target: newTarget || '-',
+        budget: newBudget || '-',
+        pic: newPic,
+        status: newStatus,
+        progress: Number(newProgress) || 0,
+        description: newDesc,
+        evaluation: newEval,
+        photo_urls: [...(editingProg.photo_urls || []), ...uploadedUrls]
+      };
 
-    const updated = [newProg, ...programs];
-    setPrograms(updated);
-    localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
+      const updated = programs.map(p => p.id === editingProg.id ? updatedProg : p);
+      setPrograms(updated);
+      localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
+      setEditingProg(null);
+    } else {
+      const newProg = {
+        id: String(Date.now()),
+        name: newName,
+        priorityName: newPriority,
+        volume: newVolume || '-',
+        frequency: newFrequency || '-',
+        location: newLocation || '-',
+        target: newTarget || '-',
+        budget: newBudget || '-',
+        pic: newPic,
+        status: newStatus,
+        progress: Number(newProgress) || 0,
+        description: newDesc,
+        evaluation: newEval,
+        photo_urls: uploadedUrls
+      };
+
+      const updated = [newProg, ...programs];
+      setPrograms(updated);
+      localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
+    }
 
     // Clear form
     setNewName('');
@@ -1348,7 +1422,13 @@ function Siklus4View() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              handleCancelForm();
+            } else {
+              setShowAddForm(true);
+            }
+          }}
           className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-xs font-bold px-4 py-2 cursor-pointer shadow-sm transition"
         >
           {showAddForm ? 'Batal' : '+ Tambah Program Kerja'}
@@ -1357,7 +1437,9 @@ function Siklus4View() {
 
       {showAddForm && (
         <form onSubmit={handleSubmit} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider border-b border-slate-100 pb-2">Form Rencana Program Baru (Tabel 3)</h3>
+          <h3 className="font-extrabold text-xs text-slate-850 uppercase tracking-wider border-b border-slate-100 pb-2">
+            {editingProg ? `Edit Program Kerja: ${editingProg.name}` : 'Form Rencana Program Baru (Tabel 3)'}
+          </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -1675,6 +1757,19 @@ function Siklus4View() {
                               </div>
                             </div>
                           )}
+
+                          <div className="md:col-span-3 flex justify-end gap-2 border-t border-slate-150/70 pt-3">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEdit(prog);
+                              }}
+                              className="rounded-lg bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 font-bold px-3.5 py-1.5 flex items-center gap-1.5 cursor-pointer transition text-xxs"
+                            >
+                              <Edit className="h-3 w-3" /> Edit Detail Program Kerja
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -3442,6 +3537,100 @@ function ProfileView({ handleLogout, rtTargets, setRtTargets }: any) {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// SUB-VIEW 1.7: Dokumentasi Gallery View Component
+// -------------------------------------------------------------
+function DokumentasiGalleryView() {
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [selectedProgId, setSelectedProgId] = useState<string>('');
+
+  useEffect(() => {
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    if (savedProgs) {
+      const parsed = JSON.parse(savedProgs);
+      setPrograms(parsed);
+      if (parsed.length > 0) {
+        setSelectedProgId(parsed[0].id);
+      }
+    }
+  }, []);
+
+  const activeProg = programs.find(p => p.id === selectedProgId);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">📸 Galeri Dokumentasi Program Kerja KKN</h2>
+          <p className="text-[10px] text-slate-450 mt-0.5">Pilih program kerja untuk melihat seluruh foto dokumentasi yang di-backup ke Google Drive.</p>
+        </div>
+
+        <div className="max-w-md">
+          <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Pilih Rencana Program Kerja</label>
+          <select
+            value={selectedProgId}
+            onChange={(e) => setSelectedProgId(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
+          >
+            {programs.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            {programs.length === 0 && (
+              <option value="">(Belum ada program kerja)</option>
+            )}
+          </select>
+        </div>
+      </div>
+
+      {activeProg ? (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wide">{activeProg.name}</h3>
+            <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px]">
+              <span className="text-slate-500">PJ: <strong className="text-slate-700">{activeProg.pic}</strong></span>
+              <span className="h-3 w-px bg-slate-200" />
+              <span className="text-slate-500">Status: <strong className="text-slate-700">{activeProg.status} ({activeProg.progress}%)</strong></span>
+              <span className="h-3 w-px bg-slate-200" />
+              <span className="text-slate-500">Lokasi: <strong className="text-slate-700">{activeProg.location}</strong></span>
+            </div>
+          </div>
+
+          {activeProg.photo_urls && activeProg.photo_urls.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {activeProg.photo_urls.map((url: string, index: number) => (
+                <div key={index} className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm hover:shadow-md transition">
+                  <img
+                    src={url}
+                    alt={`Dokumentasi ${index + 1}`}
+                    className="w-full h-44 object-cover"
+                  />
+                  <div className="p-3 bg-white border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-655">Foto Dokumentasi #{index + 1}</span>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-teal-650 hover:text-teal-850 font-bold flex items-center gap-0.5"
+                    >
+                      Buka Drive ↗
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-slate-400 font-medium italic space-y-2">
+              <Camera className="h-8 w-8 mx-auto text-slate-300 animate-bounce" />
+              <p>Belum ada dokumentasi foto yang diunggah untuk program kerja ini.</p>
+              <p className="text-[9px] text-slate-400">Silakan edit program kerja di menu "Siklus 4" untuk menambahkan foto.</p>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
