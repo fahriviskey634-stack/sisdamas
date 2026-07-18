@@ -128,11 +128,11 @@ async function buildLogbookDocx(member: typeof KKN_MEMBERS[0], entries: any[]): 
   tableRows.push(new docx.TableRow({
     tableHeader: true,
     children: [
-      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 8, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "No", bold: true, size: 22 })] })] }),
-      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 17, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Tanggal", bold: true, size: 22 })] })] }),
-      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 40, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Kegiatan", bold: true, size: 22 })] })] }),
-      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 25, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Output", bold: true, size: 22 })] })] }),
-      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 10, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Bukti Foto", bold: true, size: 22 })] })] })
+      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 6, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "No", bold: true, size: 22 })] })] }),
+      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 14, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Tanggal", bold: true, size: 22 })] })] }),
+      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 36, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Kegiatan", bold: true, size: 22 })] })] }),
+      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 24, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ children: [new docx.TextRun({ text: "Output", bold: true, size: 22 })] })] }),
+      new docx.TableCell({ shading: { fill: "FFF2CC" }, width: { size: 20, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: "Bukti Foto", bold: true, size: 22 })] })] })
     ]
   }));
 
@@ -150,19 +150,19 @@ async function buildLogbookDocx(member: typeof KKN_MEMBERS[0], entries: any[]): 
 
       tableRows.push(new docx.TableRow({
         children: [
-          new docx.TableCell({ width: { size: 8, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: String(idx++) })] }),
-          new docx.TableCell({ width: { size: 17, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: dateFormatted })] }),
-          new docx.TableCell({ width: { size: 40, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: act.kegiatan })] }),
-          new docx.TableCell({ width: { size: 25, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: act.output })] }),
+          new docx.TableCell({ width: { size: 6, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: String(idx++) })] }),
+          new docx.TableCell({ width: { size: 14, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, text: dateFormatted })] }),
+          new docx.TableCell({ width: { size: 36, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: act.kegiatan })] }),
+          new docx.TableCell({ width: { size: 24, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: act.output })] }),
           new docx.TableCell({
-            width: { size: 10, type: docx.WidthType.PERCENTAGE },
+            width: { size: 20, type: docx.WidthType.PERCENTAGE },
             children: [
               new docx.Paragraph({
                 alignment: docx.AlignmentType.CENTER,
                 children: [
                   new docx.ImageRun({
                     data: imgBuffer,
-                    transformation: { width: 50, height: 50 },
+                    transformation: { width: 100, height: 75 },
                     type: "jpg"
                   })
                 ]
