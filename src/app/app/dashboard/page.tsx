@@ -419,6 +419,8 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [googleCalendarId, setGoogleCalendarId] = useState<string>('primary');
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date(2026, 6, 1)); // start on July 2026 (KKN timeline start)
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null);
 
   // Fetch Google Calendar ID and Events list dynamically
   useEffect(() => {
@@ -440,6 +442,73 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
       })
       .catch(err => console.error("Failed to load Calendar events", err));
   }, []);
+
+  // Month view calendar helpers
+  const handlePrevMonth = () => {
+    setCurrentCalendarDate(new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentCalendarDate(new Date(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth() + 1, 1));
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay(); // Sunday is 0
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    const days: (Date | null)[] = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= totalDays; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
+  };
+
+  const getEventsForDay = (day: Date | null) => {
+    if (!day) return [];
+    
+    const year = day.getFullYear();
+    const month = String(day.getMonth() + 1).padStart(2, '0');
+    const dateNum = String(day.getDate()).padStart(2, '0');
+    const dayStr = `${year}-${month}-${dateNum}`;
+    
+    return calendarEvents.filter(evt => {
+      const startStr = evt.start?.date || (evt.start?.dateTime ? evt.start.dateTime.split('T')[0] : '');
+      const endStr = evt.end?.date || (evt.end?.dateTime ? evt.end.dateTime.split('T')[0] : '');
+      
+      if (startStr && endStr) {
+        if (evt.start?.date) {
+          return dayStr >= startStr && dayStr < endStr;
+        }
+        return dayStr >= startStr && dayStr <= endStr;
+      }
+      return startStr === dayStr;
+    });
+  };
+
+  const getEventsForActiveMonth = () => {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    return calendarEvents.filter(evt => {
+      const startStr = evt.start?.date || evt.start?.dateTime || '';
+      if (!startStr) return false;
+      const evtDate = new Date(startStr);
+      return evtDate.getFullYear() === year && evtDate.getMonth() === month;
+    });
+  };
+
+  const displayedEvents = selectedCalendarDay 
+    ? getEventsForDay(selectedCalendarDay)
+    : getEventsForActiveMonth();
+
+  const monthName = currentCalendarDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const agendaTitle = selectedCalendarDay
+    ? `Agenda: ${selectedCalendarDay.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    : `Semua Agenda - ${monthName}`;
 
   // Detailed mock surveys seed matching exactly the 82 completed surveys
   useEffect(() => {
@@ -804,26 +873,103 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-2">
-              <div className="w-full h-[450px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 relative">
-                <iframe
-                  src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(googleCalendarId)}&ctz=Asia%2FJakarta`}
-                  style={{ border: 0 }}
-                  className="w-full h-full absolute inset-0"
-                  frameBorder="0"
-                  scrolling="no"
-                ></iframe>
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 flex flex-col h-[450px]">
+                {/* Calendar Grid Header */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+                  <h4 className="font-extrabold text-slate-800 text-xs flex items-center gap-2">
+                    📅 {monthName}
+                  </h4>
+                  <div className="flex gap-1.5">
+                    <button 
+                      type="button"
+                      onClick={handlePrevMonth}
+                      className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition text-[10px] font-bold"
+                      title="Bulan Sebelumnya"
+                    >
+                      &larr;
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleNextMonth}
+                      className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition text-[10px] font-bold"
+                      title="Bulan Selanjutnya"
+                    >
+                      &rarr;
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weekday Labels */}
+                <div className="grid grid-cols-7 gap-1 text-center font-bold text-[9px] text-slate-400 uppercase mb-2">
+                  {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(d => (
+                    <div key={d} className="py-1">{d}</div>
+                  ))}
+                </div>
+
+                {/* Days Grid */}
+                <div className="grid grid-cols-7 gap-1.5 flex-1 select-none">
+                  {getDaysInMonth(currentCalendarDate).map((day, idx) => {
+                    if (!day) return <div key={`empty-${idx}`} className="bg-transparent border border-transparent rounded-lg"></div>;
+                    
+                    const dayEvents = getEventsForDay(day);
+                    const isToday = new Date().toDateString() === day.toDateString();
+                    const isSelected = selectedCalendarDay && selectedCalendarDay.toDateString() === day.toDateString();
+                    
+                    return (
+                      <div 
+                        key={day.toISOString()}
+                        onClick={() => setSelectedCalendarDay(isSelected ? null : day)}
+                        className={`p-1.5 border rounded-lg flex flex-col justify-between items-center cursor-pointer transition relative group h-12 hover:shadow-xs ${
+                          isSelected 
+                            ? 'bg-emerald-600 border-emerald-700 text-white font-bold' 
+                            : isToday 
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold' 
+                              : 'bg-white border-slate-150 text-slate-800 hover:border-slate-350 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold">{day.getDate()}</span>
+                        
+                        {/* Event Indicator Dots */}
+                        {dayEvents.length > 0 && (
+                          <div className="flex gap-0.5 justify-center w-full mt-1">
+                            {dayEvents.slice(0, 3).map((evt, eIdx) => (
+                              <span 
+                                key={evt.id || eIdx} 
+                                className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-emerald-500'}`}
+                                title={evt.summary}
+                              />
+                            ))}
+                            {dayEvents.length > 3 && (
+                              <span className={`text-[7px] font-black leading-none ${isSelected ? 'text-white' : 'text-slate-500'}`}>+</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               <p className="text-[9px] text-slate-450 italic leading-relaxed">
-                💡 <strong>Catatan Google:</strong> Jika kalender meminta login Google di atas, pastikan kalender terkait telah diset menjadi <strong>Publik</strong> di pengaturan Google Calendar Anda. Anda juga dapat membaca daftar agenda terperinci secara langsung pada panel <strong>Agenda Timeline</strong> di sebelah kanan.
+                💡 <strong>Tips Kalender:</strong> Kalender di atas terintegrasi otomatis ke Google Calendar via Service Account secara real-time. Klik pada tanggal yang memiliki indikator hijau untuk melihat detail agenda kegiatan di sebelah kanan.
               </p>
             </div>
 
             <div className="lg:col-span-1 bg-slate-50 border border-slate-150 p-4 rounded-xl flex flex-col h-[450px]">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">
-                📋 Agenda Timeline KKN 56
-              </span>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  📋 {agendaTitle}
+                </span>
+                {selectedCalendarDay && (
+                  <button 
+                    onClick={() => setSelectedCalendarDay(null)}
+                    className="text-[9px] font-bold text-emerald-600 hover:text-emerald-800"
+                  >
+                    Reset &times;
+                  </button>
+                )}
+              </div>
               <div className="overflow-y-auto flex-1 space-y-3 pr-1 text-xs">
-                {calendarEvents.map((evt, idx) => {
+                {displayedEvents.map((evt, idx) => {
                   const startStr = evt.start?.date || evt.start?.dateTime || '';
                   const formattedDate = startStr 
                     ? new Date(startStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -838,8 +984,10 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
                     </div>
                   );
                 })}
-                {calendarEvents.length === 0 && (
-                  <p className="text-[10px] text-slate-400 italic text-center py-8">Tidak ada agenda kegiatan terdaftar.</p>
+                {displayedEvents.length === 0 && (
+                  <p className="text-[10px] text-slate-400 italic text-center py-8">
+                    {selectedCalendarDay ? "Tidak ada kegiatan pada tanggal ini." : "Tidak ada agenda kegiatan bulan ini."}
+                  </p>
                 )}
               </div>
             </div>

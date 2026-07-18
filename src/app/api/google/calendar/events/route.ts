@@ -1,5 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleAccessToken } from '@/lib/googleAuth';
+import fs from 'fs';
+import path from 'path';
+
+// Parse the local ICS file to serve calendar events as a fail-safe backup
+function parseICSFile(): any[] {
+  const events: any[] = [];
+  try {
+    const icsPath = path.join(process.cwd(), 'Kalender kkn 56.ics');
+    if (!fs.existsSync(icsPath)) return [];
+
+    const fileContent = fs.readFileSync(icsPath, 'utf8');
+    const lines = fileContent.split(/\r?\n/);
+    
+    let currentEvent: any = null;
+    
+    for (const line of lines) {
+      if (line.startsWith('BEGIN:VEVENT')) {
+        currentEvent = {};
+      } else if (line.startsWith('END:VEVENT')) {
+        if (currentEvent && currentEvent.summary) {
+          events.push({
+            id: `ics-${events.length}-${Date.now()}`,
+            summary: currentEvent.summary,
+            description: currentEvent.description || 'Agenda Resmi KKN 56 Sukahaji',
+            start: { date: currentEvent.startDate },
+            end: { date: currentEvent.endDate },
+            source: 'ics'
+          });
+        }
+        currentEvent = null;
+      } else if (currentEvent) {
+        if (line.startsWith('SUMMARY:')) {
+          currentEvent.summary = line.substring(8).trim();
+        } else if (line.startsWith('DESCRIPTION:')) {
+          currentEvent.description = line.substring(12).trim();
+        } else if (line.startsWith('DTSTART;VALUE=DATE:')) {
+          const dateRaw = line.substring(19).trim(); // YYYYMMDD
+          if (dateRaw.length >= 8) {
+            currentEvent.startDate = `${dateRaw.substring(0, 4)}-${dateRaw.substring(4, 6)}-${dateRaw.substring(6, 8)}`;
+          }
+        } else if (line.startsWith('DTEND;VALUE=DATE:')) {
+          const dateRaw = line.substring(17).trim(); // YYYYMMDD
+          if (dateRaw.length >= 8) {
+            currentEvent.endDate = `${dateRaw.substring(0, 4)}-${dateRaw.substring(4, 6)}-${dateRaw.substring(6, 8)}`;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to parse ICS file:", err);
+  }
+  return events;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,11 +66,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    let gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    
+    // Check if local credentials file exists
+    const jsonPath = path.join(process.cwd(), 'gen-lang-client-0624061505-69c98224148d.json');
+    if (fs.existsSync(jsonPath)) {
+      gcpKey = fs.readFileSync(jsonPath, 'utf8');
+    }
+
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
     // Check for developer fallback / offline mode
-    if (!gcpKey || gcpKey.includes('placeholder')) {
+    if (!gcpKey || gcpKey.includes('placeholder') || calendarId.includes('placeholder')) {
       console.log(`[Google Calendar Mock] Creating event: "${title}" (${start_date} s/d ${end_date})`);
       return NextResponse.json({
         success: true,
@@ -34,21 +94,20 @@ export async function POST(req: NextRequest) {
     // Production GCP Service Account Integration
     const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/calendar.events']);
 
-    // Call Google Calendar Events insert REST API
     const eventPayload = {
       summary: title,
       description: description || 'Dibuat otomatis oleh Sistem Informasi KKN Sisdamas Sukahaji Kelompok 56',
       start: {
-        date: start_date, // YYYY-MM-DD for all-day events
+        date: start_date,
         timeZone: 'Asia/Jakarta'
       },
       end: {
-        date: end_date, // YYYY-MM-DD for all-day events
+        date: end_date,
         timeZone: 'Asia/Jakarta'
       }
     };
 
-    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -85,56 +144,72 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    const icsEvents = parseICSFile();
+    let apiEvents: any[] = [];
+
+    let gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+    const jsonPath = path.join(process.cwd(), 'gen-lang-client-0624061505-69c98224148d.json');
+    if (fs.existsSync(jsonPath)) {
+      gcpKey = fs.readFileSync(jsonPath, 'utf8');
+    }
+
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
-    // Fallback if not configured
-    if (!gcpKey || gcpKey.includes('placeholder')) {
-      const mockEvents = [
-        { id: '1', summary: 'Survey bersama DPL', start: { date: '2026-07-09' }, end: { date: '2026-07-10' } },
-        { id: '2', summary: 'ngumpulin barang di ilya', start: { date: '2026-07-16' }, end: { date: '2026-07-17' } },
-        { id: '3', summary: 'Pembukaan dan pra siklus', start: { date: '2026-07-21' }, end: { date: '2026-07-22' } },
-        { id: '4', summary: 'Rembuk warga SIKLUS 1', start: { date: '2026-07-22' }, end: { date: '2026-07-23' } },
-        { id: '5', summary: 'LIBUR BESAR', start: { date: '2026-07-23' }, end: { date: '2026-07-24' } },
-        { id: '6', summary: 'SIKLUS 1 & 2', start: { date: '2026-07-24' }, end: { date: '2026-07-27' } }
-      ];
-      return NextResponse.json({ success: true, mocked: true, events: mockEvents });
-    }
+    // Attempt to fetch from live Google Calendar API
+    if (gcpKey && !gcpKey.includes('placeholder') && !calendarId.includes('placeholder')) {
+      try {
+        const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/calendar.readonly']);
+        const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?orderBy=startTime&singleEvents=true`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          next: { revalidate: 60 } // cache for 1 minute
+        });
 
-    const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/calendar.readonly']);
-    
-    // Call Google Calendar API to list events
-    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?orderBy=startTime&singleEvents=true`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`
+        if (res.ok) {
+          const data = await res.json();
+          apiEvents = (data.items || []).map((item: any) => ({
+            id: item.id,
+            summary: item.summary || 'Kegiatan Tanpa Judul',
+            description: item.description || '',
+            start: item.start || {},
+            end: item.end || {},
+            htmlLink: item.htmlLink || '',
+            source: 'google'
+          }));
+        }
+      } catch (apiErr) {
+        console.warn("Failed to fetch from live Google Calendar API, falling back to ICS:", apiErr);
       }
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Google Calendar API rejected list request: ${errText}`);
     }
 
-    const data = await res.json();
+    // Merge events, removing duplicates by summary (to prioritize Google version if overlap)
+    const mergedMap = new Map<string, any>();
     
-    // Obfuscate or format calendar items list
-    const formattedEvents = (data.items || []).map((item: any) => ({
-      id: item.id,
-      summary: item.summary || 'Kegiatan Tanpa Judul',
-      description: item.description || '',
-      start: item.start || {},
-      end: item.end || {},
-      htmlLink: item.htmlLink || ''
-    }));
+    // First seed with ICS events
+    for (const evt of icsEvents) {
+      mergedMap.set(evt.summary.toLowerCase(), evt);
+    }
+    
+    // Overwrite or append with live API events
+    for (const evt of apiEvents) {
+      mergedMap.set(evt.summary.toLowerCase(), evt);
+    }
+
+    const mergedEvents = Array.from(mergedMap.values()).sort((a, b) => {
+      const dateA = a.start?.date || a.start?.dateTime || '';
+      const dateB = b.start?.date || b.start?.dateTime || '';
+      return dateA.localeCompare(dateB);
+    });
 
     return NextResponse.json({
       success: true,
-      events: formattedEvents
+      events: mergedEvents
     });
 
   } catch (err: any) {
-    console.error("Google Calendar list error:", err);
+    console.error("Google Calendar GET route error:", err);
     return NextResponse.json(
       { success: false, error: err.message, events: [] },
       { status: 500 }

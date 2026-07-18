@@ -45,3 +45,6 @@ next-env.d.ts
 /Color Palate.png
 
 .vercel
+
+# Google API Credentials (Service Account Keys)
+gen-lang-client-*.json

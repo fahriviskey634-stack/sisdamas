@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Generates a Google API OAuth access token using a Service Account JWT.
@@ -7,6 +9,19 @@ import crypto from 'crypto';
 export async function getGoogleAccessToken(scopes: string[]): Promise<string> {
   let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+
+  // Try reading service account key from the uploaded JSON file in root
+  try {
+    const jsonPath = path.join(process.cwd(), 'gen-lang-client-0624061505-69c98224148d.json');
+    if (fs.existsSync(jsonPath)) {
+      const fileData = fs.readFileSync(jsonPath, 'utf8');
+      const parsed = JSON.parse(fileData);
+      email = parsed.client_email || email;
+      privateKey = parsed.private_key || privateKey;
+    }
+  } catch (err) {
+    console.error("[Google Auth] Error reading local service account JSON key file:", err);
+  }
 
   if (privateKey && privateKey.trim().startsWith('{')) {
     try {
