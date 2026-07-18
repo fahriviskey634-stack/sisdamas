@@ -512,59 +512,11 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
     ? `Agenda: ${selectedCalendarDay.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
     : `Semua Agenda - ${monthName}`;
 
-  // Detailed mock surveys seed matching exactly the 82 completed surveys
+  // Load survey data from localStorage drafts only (no mock data)
   useEffect(() => {
-    const rawData = [];
-    const statuses = ['Milik Sendiri', 'Sewa', 'Milik Keluarga', 'Numpang'];
-    const conditions = ['Layak Huni', 'Tidak Layak Huni', 'Butuh Perbaikan'];
-    const problemCats = ['Infrastruktur', 'Kesehatan', 'Ekonomi', 'Lingkungan', 'Pendidikan'];
+    const rawData: any[] = [];
 
-    // Generate 28 KKs for RW 01
-    for (let i = 1; i <= 28; i++) {
-      const rtNum = `RT 0${(i % 3) + 1}`;
-      rawData.push({
-        id: `kk-rw1-${i}`,
-        rw: 'RW 01',
-        rt: rtNum,
-        rt_label: `${rtNum} / RW 01`,
-        family_size: 3 + (i % 4), // 3 to 6 members
-        housing_status: statuses[i % statuses.length],
-        housing_condition: conditions[i % conditions.length],
-        problems: i % 2 === 0 ? [problemCats[i % problemCats.length]] : []
-      });
-    }
-
-    // Generate 30 KKs for RW 02
-    for (let i = 1; i <= 30; i++) {
-      const rtNum = `RT 0${(i % 3) + 1}`;
-      rawData.push({
-        id: `kk-rw2-${i}`,
-        rw: 'RW 02',
-        rt: rtNum,
-        rt_label: `${rtNum} / RW 02`,
-        family_size: 4 + (i % 3), // 4 to 6 members
-        housing_status: statuses[(i + 1) % statuses.length],
-        housing_condition: conditions[(i + 1) % conditions.length],
-        problems: i % 3 === 0 ? [problemCats[(i + 1) % problemCats.length]] : []
-      });
-    }
-
-    // Generate 24 KKs for RW 03
-    for (let i = 1; i <= 24; i++) {
-      const rtNum = `RT 0${(i % 3) + 1}`;
-      rawData.push({
-        id: `kk-rw3-${i}`,
-        rw: 'RW 03',
-        rt: rtNum,
-        rt_label: `${rtNum} / RW 03`,
-        family_size: 2 + (i % 4), // 2 to 5 members
-        housing_status: statuses[(i + 2) % statuses.length],
-        housing_condition: conditions[(i + 2) % conditions.length],
-        problems: i % 2 === 0 ? [problemCats[(i + 2) % problemCats.length]] : []
-      });
-    }
-
-    // Check if there are real local storage drafts, merge them to make live counts reflect draft changes!
+    // Check if there are real local storage drafts
     const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
     if (drafts.length > 0) {
       const draftSurveys = drafts.map((d: any, idx: number) => {
@@ -1273,51 +1225,15 @@ function Siklus4View() {
         setNewPriority(parsed[0].problem_text);
       }
     } else {
-      setPriorityProblems(INITIAL_PROBLEMS);
-      if (INITIAL_PROBLEMS.length > 0) {
-        setNewPriority(INITIAL_PROBLEMS[0].problem_text);
-      }
+      setPriorityProblems([]);
     }
 
     // Programs
     const savedProgs = localStorage.getItem('sukahaji_siklus4_programs');
     if (savedProgs) {
       setPrograms(JSON.parse(savedProgs));
-    } else {
-      const defaultProgs = [
-        {
-          id: '1',
-          name: 'Normalisasi Selokan & Saluran Air RT 02 / RW 01',
-          priorityName: 'Saluran air mampet dan berbau (Skor USG: 13)',
-          volume: '150 Meter',
-          frequency: '1 Kali (Kerja Bakti)',
-          location: 'RT 02 / RW 01',
-          target: 'Warga Dusun 2',
-          budget: 'Rp 450.000 (Swadaya)',
-          pic: 'Rizki & Kelompok 56',
-          status: 'In Progress',
-          progress: 60,
-          description: 'Pembersihan got mampet bersama warga dusun untuk mencegah demam berdarah.',
-          evaluation: 'Partisipasi warga sangat tinggi, got lancar kembali.'
-        },
-        {
-          id: '2',
-          name: 'Pengadaan Drum Bak Sampah Organik & Anorganik',
-          priorityName: 'Pembuangan sampah sembarangan di gang RT 03 (Skor USG: 11)',
-          volume: '6 Unit Bak',
-          frequency: 'Penyediaan Permanen',
-          location: 'RT 03 / RW 02',
-          target: 'Setiap RT di Dusun 2',
-          budget: 'Rp 1.200.000 (Dana Desa)',
-          pic: 'Fasilitator Kelompok 56',
-          status: 'Planned',
-          progress: 20,
-          description: 'Penyediaan 6 unit drum pemilah sampah organik dan non-organik di gang utama.',
-          evaluation: 'Drum sampah dalam tahap pengecatan dan pemberian stiker edukasi.'
-        }
-      ];
+      const defaultProgs: any[] = [];
       setPrograms(defaultProgs);
-      localStorage.setItem('sukahaji_siklus4_programs', JSON.stringify(defaultProgs));
     }
   }, []);
 
@@ -1663,7 +1579,7 @@ function Siklus4View() {
 // SUB-VIEW 2: Sticky Notes View Component
 // -------------------------------------------------------------
 function StickyNotesView() {
-  const [notes, setNotes] = useState<any[]>(INITIAL_MOCK_NOTES);
+  const [notes, setNotes] = useState<any[]>([]);
   const [newContent, setNewContent] = useState('');
   const [selectedColumn, setSelectedColumn] = useState<'Aspirasi' | 'Masalah' | 'Potensi' | 'Lainnya'>('Aspirasi');
   const [selectedColor, setSelectedColor] = useState('#FEF08A');
@@ -2230,8 +2146,6 @@ function LogbookView({ currentUser }: { currentUser: any }) {
   // Form states for new activity row
   const [kegiatanText, setKegiatanText] = useState('');
   const [outputText, setOutputText] = useState('');
-  const [volumeVal, setVolumeVal] = useState<number>(1);
-  const [satuanVal, setSatuanVal] = useState('kali');
   const [photoPreview, setPhotoPreview] = useState<string>('');
 
   // Sync activeNim with currentUser
@@ -2267,15 +2181,13 @@ function LogbookView({ currentUser }: { currentUser: any }) {
       id: String(Date.now()),
       kegiatan: kegiatanText.trim(),
       output: outputText.trim(),
-      volume: volumeVal,
-      satuan: satuanVal,
+      volume: 1,
+      satuan: 'kali',
       bukti_foto_url: photoPreview || '📷 default_foto.jpg'
     };
     setActivities(prev => [...prev, newAct]);
     setKegiatanText('');
     setOutputText('');
-    setVolumeVal(1);
-    setSatuanVal('kali');
     setPhotoPreview('');
   };
 
@@ -2290,6 +2202,26 @@ function LogbookView({ currentUser }: { currentUser: any }) {
     localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2000);
+
+    try {
+      await fetch('/api/sync/logbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nim: activeNim, logbookData: allLogs })
+      });
+    } catch (e) {
+      console.warn("Background logbook sync failed, saved locally:", e);
+    }
+  };
+
+  const handleDeleteDayLogbook = async () => {
+    if (!activeNim) return;
+    if (!confirm('Apakah Anda yakin ingin menghapus seluruh logbook pada tanggal ini?')) return;
+
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    delete allLogs[selectedDate];
+    localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
+    setActivities([]);
 
     try {
       await fetch('/api/sync/logbook', {
@@ -2375,12 +2307,20 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                   className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 text-xs outline-none focus:border-teal-sedang transition font-bold"
                 />
               </div>
-              <button
-                onClick={handleSaveLogbook}
-                className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-xs font-bold px-5 py-2 cursor-pointer shadow-sm transition"
-              >
-                {success ? '✓ Berhasil Disimpan' : 'Simpan Logbook'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDeleteDayLogbook}
+                  className="rounded-xl bg-red-650 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 cursor-pointer shadow-sm transition"
+                >
+                  Hapus Hari Ini
+                </button>
+                <button
+                  onClick={handleSaveLogbook}
+                  className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-xs font-bold px-5 py-2 cursor-pointer shadow-sm transition"
+                >
+                  {success ? '✓ Berhasil Disimpan' : 'Simpan Logbook'}
+                </button>
+              </div>
             </div>
 
             {/* List of current day's activities */}
@@ -2391,8 +2331,6 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                     <th className="px-4 py-2 text-center w-12">No</th>
                     <th className="px-4 py-2">Uraian Kegiatan</th>
                     <th className="px-4 py-2">Output Kegiatan</th>
-                    <th className="px-4 py-2 text-center w-16">Vol</th>
-                    <th className="px-4 py-2 text-center w-20">Satuan</th>
                     <th className="px-4 py-2 text-center">Foto Bukti</th>
                     <th className="px-4 py-2 text-center w-12"></th>
                   </tr>
@@ -2403,8 +2341,6 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                       <td className="px-4 py-3 text-center font-bold text-slate-400">{index + 1}</td>
                       <td className="px-4 py-3 font-semibold text-slate-700">{act.kegiatan}</td>
                       <td className="px-4 py-3 text-slate-600">{act.output}</td>
-                      <td className="px-4 py-3 text-center font-bold text-teal-tua">{act.volume}</td>
-                      <td className="px-4 py-3 text-center text-slate-500 font-semibold">{act.satuan}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 text-xxs font-bold">
                           {act.bukti_foto_url.startsWith('data:image') ? '📷 Foto Terlampir' : act.bukti_foto_url}
@@ -2422,7 +2358,7 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                   ))}
                   {activities.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-medium italic">
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400 font-medium italic">
                         Belum ada kegiatan yang dimasukkan untuk tanggal ini. Silakan tambahkan baris kegiatan di bawah.
                       </td>
                     </tr>
@@ -2453,28 +2389,6 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                 />
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-bold text-slate-450 uppercase">Volume:</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={volumeVal}
-                    onChange={(e) => setVolumeVal(parseInt(e.target.value) || 1)}
-                    className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 w-16 text-xs outline-none focus:border-teal-sedang transition text-center"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-bold text-slate-450 uppercase">Satuan:</span>
-                  <select
-                    value={satuanVal}
-                    onChange={(e) => setSatuanVal(e.target.value)}
-                    className="rounded-lg border border-slate-250 bg-white text-slate-900 px-3 py-1 text-xs outline-none focus:border-teal-sedang transition font-semibold"
-                  >
-                    {['kali', 'unit', 'orang', 'dokumen', 'kegiatan', 'kartu keluarga'].map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
                 <div className="flex items-center gap-2 flex-1">
                   <span className="text-[9px] font-bold text-slate-450 uppercase">Foto Bukti:</span>
                   <input
@@ -2777,21 +2691,7 @@ function PriorityView() {
     if (saved) {
       setItems(JSON.parse(saved));
     } else {
-      // Map INITIAL_PROBLEMS to have default ABCD scores and alternative descriptions
-      const mapped = INITIAL_PROBLEMS.map((prob: any) => ({
-        ...prob,
-        a_score: prob.urgency || 3,
-        b_score: prob.seriousness || 3,
-        c_score: prob.growth || 3,
-        d_score: 3,
-        total_score_abcd: (prob.urgency || 3) + (prob.seriousness || 3) + (prob.growth || 3) + 3,
-        potensi_uraian: 'Swadaya gotong royong warga desa',
-        alt_mandiri: 'Kerja bakti pembersihan/perbaikan mandiri',
-        alt_dukungan_luar: 'Pengajuan proposal bantuan material',
-        alt_bantuan_luar: 'Bantuan dinas terkait/dana desa'
-      }));
-      setItems(mapped);
-      localStorage.setItem('sukahaji_priority_items', JSON.stringify(mapped));
+      setItems([]);
     }
   }, []);
 
@@ -3387,14 +3287,6 @@ const COLORS = [
   { name: 'Merah Muda', value: '#FBCFE8', text: '#831843' }
 ];
 
-const INITIAL_MOCK_NOTES = [
-  { id: 'mock-1', column_name: 'Masalah', content: 'Kurang fasilitas bak sampah terpusat di lingkungan RT 02', color: '#FEF08A', rt_number: 'RT 02 / RW 01', author: 'Andi', created_at: new Date().toISOString() },
-  { id: 'mock-2', column_name: 'Potensi', content: 'Kerajinan anyaman bambu warga RT 01 dapat dikembangkan sebagai UMKM unggulan', color: '#BBF7D0', rt_number: 'RT 01 / RW 02', author: 'Siti', created_at: new Date().toISOString() },
-  { id: 'mock-3', column_name: 'Aspirasi', content: 'Warga menginginkan adanya pelatihan posyandu lansia bulanan', color: '#BFDBFE', rt_number: 'RT 03 / RW 01', author: 'Budi', created_at: new Date().toISOString() }
-];
+const INITIAL_MOCK_NOTES: any[] = [];
 
-const INITIAL_PROBLEMS = [
-  { id: 'prob-1', problem_text: 'Jalan gang RW 02 rusak parah dan tergenang lumpur saat hujan', category: 'Infrastruktur', rt_label: 'RT 02 / RW 02', urgency: 4, seriousness: 4, growth: 3, total_score: 11 },
-  { id: 'prob-2', problem_text: 'Saluran pembuangan air RT 01 mampet memicu penumpukan sampah', category: 'Lingkungan', rt_label: 'RT 01 / RW 01', urgency: 3, seriousness: 3, growth: 4, total_score: 10 },
-  { id: 'prob-3', problem_text: 'Tingkat pengangguran usia produktif tinggi akibat kurang pelatihan kerja', category: 'Ekonomi', rt_label: 'RT 03 / RW 03', urgency: 2, seriousness: 3, growth: 3, total_score: 8 }
-];
+const INITIAL_PROBLEMS: any[] = [];
