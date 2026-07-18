@@ -1242,6 +1242,8 @@ function Siklus4View() {
   const [newProgress, setNewProgress] = useState(0);
   const [newDesc, setNewDesc] = useState('');
   const [newEval, setNewEval] = useState('');
+  const [newPhotos, setNewPhotos] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   // Load programs & priority problems from localStorage
   useEffect(() => {
@@ -1261,14 +1263,31 @@ function Siklus4View() {
     const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
     if (savedProgs) {
       setPrograms(JSON.parse(savedProgs));
-      const defaultProgs: any[] = [];
-      setPrograms(defaultProgs);
     }
   }, []);
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!newName) return;
+
+    setUploadingPhotos(true);
+    let uploadedUrls: string[] = [];
+
+    if (newPhotos.length > 0) {
+      try {
+        const res = await fetch('/api/sync/program-kerja', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photos: newPhotos })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          uploadedUrls = data.urls || [];
+        }
+      } catch (err) {
+        console.error("Gagal mengunggah foto dokumentasi ke Google Drive:", err);
+      }
+    }
 
     const newProg = {
       id: String(Date.now()),
@@ -1283,7 +1302,8 @@ function Siklus4View() {
       status: newStatus,
       progress: Number(newProgress) || 0,
       description: newDesc,
-      evaluation: newEval
+      evaluation: newEval,
+      photo_urls: uploadedUrls
     };
 
     const updated = [newProg, ...programs];
@@ -1301,6 +1321,8 @@ function Siklus4View() {
     setNewEval('');
     setNewProgress(0);
     setNewStatus('Planned');
+    setNewPhotos([]);
+    setUploadingPhotos(false);
     setShowAddForm(false);
   };
 
@@ -1487,12 +1509,53 @@ function Siklus4View() {
             </div>
           </div>
 
+          <div className="border-t border-slate-100 pt-3">
+            <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Dokumentasi Foto Kegiatan (Multiple Upload)</label>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    const fileList = Array.from(files);
+                    const readPromises = fileList.map(file => {
+                      return new Promise<string>((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.readAsDataURL(file);
+                      });
+                    });
+                    Promise.all(readPromises).then(results => {
+                      setNewPhotos(results);
+                    });
+                  }
+                }}
+                className="text-xxs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xxs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+              />
+              {newPhotos.length > 0 && (
+                <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-150 font-bold animate-pulse">
+                  📎 {newPhotos.length} File Terpilih
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-xs font-bold px-6 py-2.5 shadow-md cursor-pointer transition"
+              disabled={uploadingPhotos}
+              className="rounded-xl bg-teal-sedang hover:bg-[#113a48] disabled:bg-slate-400 text-white text-xs font-bold px-6 py-2.5 shadow-md cursor-pointer transition flex items-center gap-2"
             >
-              Simpan Rencana Program
+              {uploadingPhotos ? (
+                <>
+                  <span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                  Mengunggah Foto ke Drive...
+                </>
+              ) : (
+                'Simpan Rencana Program'
+              )}
             </button>
           </div>
         </form>
@@ -1583,6 +1646,35 @@ function Siklus4View() {
                               {prog.evaluation || 'Belum ada catatan evaluasi.'}
                             </p>
                           </div>
+                          
+                          {prog.photo_urls && prog.photo_urls.length > 0 && (
+                            <div className="md:col-span-3 border-t border-slate-100 pt-3 space-y-2">
+                              <span className="font-black text-slate-400 uppercase tracking-wider block">Dokumentasi Foto Kegiatan (Google Drive Backup)</span>
+                              <div className="flex flex-wrap gap-2">
+                                {prog.photo_urls.map((url: string, idx: number) => (
+                                  <a
+                                    key={idx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-block relative rounded-lg border border-slate-200 overflow-hidden hover:opacity-80 transition cursor-pointer"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Dokumentasi ${idx + 1}`}
+                                      className="h-16 w-24 object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
+                                    />
+                                    <span className="absolute bottom-0 left-0 right-0 bg-slate-900/70 text-white text-[8px] font-bold text-center py-0.5">
+                                      Buka Foto {idx + 1}
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
