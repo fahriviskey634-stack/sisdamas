@@ -315,21 +315,46 @@ export async function GET(req: NextRequest) {
           auth: { persistSession: false }
         });
         
-        let query = supabaseServer
+        // Step 1: Fetch logbook entries
+        let entryQuery = supabaseServer
           .from('logbook_entry')
-          .select('id, entry_date, logbook_activity(*)')
+          .select('id, entry_date')
           .eq('nim', userId);
 
-        if (startDate) query = query.gte('entry_date', startDate);
-        if (endDate) query = query.lte('entry_date', endDate);
+        if (startDate) entryQuery = entryQuery.gte('entry_date', startDate);
+        if (endDate) entryQuery = entryQuery.lte('entry_date', endDate);
 
-        const { data, error } = await query.order('entry_date', { ascending: true });
+        const { data: entryData, error: entryError } = await entryQuery.order('entry_date', { ascending: true });
 
-        if (!error && data && data.length > 0) {
-          entries = data;
+        if (entryError) {
+          console.error('[Export Logbook] Entry query error:', entryError);
+        } else if (entryData && entryData.length > 0) {
+          console.log(`[Export Logbook] Found ${entryData.length} entries for NIM ${userId}`);
+          
+          // Step 2: Fetch activities for all entry IDs
+          const entryIds = entryData.map((e: any) => e.id);
+          const { data: activityData, error: activityError } = await supabaseServer
+            .from('logbook_activity')
+            .select('id, entry_id, kegiatan, output, volume, satuan, bukti_foto_url')
+            .in('entry_id', entryIds)
+            .order('created_at', { ascending: true });
+
+          if (activityError) {
+            console.error('[Export Logbook] Activity query error:', activityError);
+          } else {
+            console.log(`[Export Logbook] Found ${activityData?.length || 0} total activities`);
+          }
+
+          // Step 3: Merge activities into entries
+          entries = entryData.map((entry: any) => ({
+            ...entry,
+            logbook_activity: (activityData || []).filter((act: any) => act.entry_id === entry.id)
+          }));
+        } else {
+          console.log(`[Export Logbook] No entries found for NIM ${userId} (date range: ${startDate || 'all'} - ${endDate || 'all'})`);
         }
       } catch (dbErr) {
-        console.warn('Supabase query failed:', dbErr);
+        console.warn('[Export Logbook] Supabase query failed:', dbErr);
       }
     }
 
