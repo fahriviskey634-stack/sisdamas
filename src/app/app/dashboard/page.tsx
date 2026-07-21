@@ -140,13 +140,11 @@ function DashboardSPA() {
         if (localNotes) {
           const parsed = JSON.parse(localNotes);
           if (parsed.length > 0) {
-            await supabase.from('sticky_note').upsert(parsed.map((n: any) => ({
-              column_name: n.column_name || 'Lainnya',
-              content: n.content,
-              color: n.color || '#FEF08A',
-              rt_number: n.rt_number || 'Umum',
-              author: n.author || 'Anonim'
-            })));
+            await fetch('/api/sync/sticky-notes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notes: parsed })
+            });
           }
         }
 
@@ -155,7 +153,11 @@ function DashboardSPA() {
         if (localPriority) {
           const parsed = JSON.parse(localPriority);
           if (parsed.length > 0) {
-            await supabase.from('priority_item').upsert(parsed);
+            await fetch('/api/sync/priority-items', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items: parsed })
+            });
           }
         }
 
@@ -164,9 +166,14 @@ function DashboardSPA() {
         if (localProgs) {
           const parsed = JSON.parse(localProgs);
           if (parsed.length > 0) {
-            await supabase.from('program').upsert(parsed);
+            await fetch('/api/sync/programs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ programs: parsed })
+            });
           }
         }
+
 
         // 4. Backup Draf Sensus
         const localDrafts = localStorage.getItem('survey_drafts');
@@ -1339,7 +1346,7 @@ function Siklus4View() {
   const [uploadError, setUploadError] = useState<string>('');
   const [editingProg, setEditingProg] = useState<any | null>(null);
 
-  // Load programs & priority problems from Supabase
+  // Load programs & priority problems from Backend API with Supabase fallback
   useEffect(() => {
     fetchPriorityProblems();
     fetchPrograms();
@@ -1347,51 +1354,52 @@ function Siklus4View() {
 
   const fetchPriorityProblems = async () => {
     try {
-      const { data } = await supabase.from('priority_item').select('*');
-      if (data && data.length > 0) {
-        setPriorityProblems(data);
-        setNewPriority(data[0].problem_text);
-      } else {
-        const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
-        if (savedProblems) {
-          const parsed = JSON.parse(savedProblems);
-          setPriorityProblems(parsed);
-          if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
-        }
+      const res = await fetch('/api/sync/priority-items');
+      const result = await res.json();
+      if (result.success && result.data && result.data.length > 0) {
+        setPriorityProblems(result.data);
+        setNewPriority(result.data[0].problem_text);
+        localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(result.data));
+        return;
       }
-    } catch {
-      const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
-      if (savedProblems) {
-        const parsed = JSON.parse(savedProblems);
-        setPriorityProblems(parsed);
-        if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
-      }
+    } catch {}
+
+    const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
+    if (savedProblems) {
+      const parsed = JSON.parse(savedProblems);
+      setPriorityProblems(parsed);
+      if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
     }
   };
 
   const fetchPrograms = async () => {
     try {
-      const { data } = await supabase.from('program').select('*').order('created_at', { ascending: false });
-      if (data && data.length > 0) {
-        setPrograms(data);
-      } else {
-        const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-        if (savedProgs) setPrograms(JSON.parse(savedProgs));
+      const res = await fetch('/api/sync/programs');
+      const result = await res.json();
+      if (result.success && result.data && result.data.length > 0) {
+        setPrograms(result.data);
+        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
+        return;
       }
-    } catch {
-      const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-      if (savedProgs) setPrograms(JSON.parse(savedProgs));
-    }
+    } catch {}
+
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    if (savedProgs) setPrograms(JSON.parse(savedProgs));
   };
 
   const syncProgramsToSupabase = async (updatedProgs: any[]) => {
     localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedProgs));
     try {
-      await supabase.from('program').upsert(updatedProgs);
+      await fetch('/api/sync/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ programs: updatedProgs })
+      });
     } catch (err) {
-      console.error('Gagal sinkronisasi program ke Supabase:', err);
+      console.error('Gagal sinkronisasi program ke API Cloud:', err);
     }
   };
+
 
 
   const handleStartEdit = (prog: any) => {
@@ -2040,13 +2048,10 @@ function StickyNotesView() {
 
   const fetchNotes = async () => {
     try {
-      const { data } = await supabase
-        .from('sticky_note')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (data && data.length > 0) {
-        setNotes(data.map((d: any) => ({
+      const res = await fetch('/api/sync/sticky-notes');
+      const result = await res.json();
+      if (result.success && result.data && result.data.length > 0) {
+        setNotes(result.data.map((d: any) => ({
           id: d.id,
           column_name: d.column_name || 'Lainnya',
           content: d.content,
@@ -2055,14 +2060,13 @@ function StickyNotesView() {
           author: d.author || 'Anonim',
           created_at: d.created_at
         })));
-      } else {
-        const local = localStorage.getItem('sukahaji_sticky_notes');
-        if (local) setNotes(JSON.parse(local));
+        localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(result.data));
+        return;
       }
-    } catch {
-      const local = localStorage.getItem('sukahaji_sticky_notes');
-      if (local) setNotes(JSON.parse(local));
-    }
+    } catch {}
+
+    const local = localStorage.getItem('sukahaji_sticky_notes');
+    if (local) setNotes(JSON.parse(local));
   };
 
   const handleAddNote = async (e: React.FormEvent) => {
@@ -2079,32 +2083,26 @@ function StickyNotesView() {
     };
 
     try {
-      const { data, error } = await supabase
-        .from('sticky_note')
-        .insert([newNote])
-        .select();
-
-      if (data && data.length > 0) {
-        setNotes((prev) => [...prev, data[0]]);
+      const res = await fetch('/api/sync/sticky-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: [newNote] })
+      });
+      const result = await res.json();
+      if (result.success && result.data && result.data.length > 0) {
+        setNotes((prev) => [...prev, result.data[0]]);
       } else {
         const itemWithId = { ...newNote, id: Math.random().toString(36).substr(2, 9) };
-        setNotes((prev) => {
-          const next = [...prev, itemWithId];
-          localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(next));
-          return next;
-        });
+        setNotes((prev) => [...prev, itemWithId]);
       }
     } catch {
       const itemWithId = { ...newNote, id: Math.random().toString(36).substr(2, 9) };
-      setNotes((prev) => {
-        const next = [...prev, itemWithId];
-        localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(next));
-        return next;
-      });
+      setNotes((prev) => [...prev, itemWithId]);
     }
 
     setNewContent('');
   };
+
 
 
   return (
@@ -3294,38 +3292,39 @@ function PriorityView() {
   const [newProbCat, setNewProbCat] = useState('Infrastruktur');
   const [newProbRt, setNewProbRt] = useState('RT 01 / RW 01');
 
-  // Load items from Supabase on mount with localStorage fallback
+  // Load items from Supabase Backend API on mount with localStorage fallback
   useEffect(() => {
     fetchPriorityItems();
   }, []);
 
   const fetchPriorityItems = async () => {
     try {
-      const { data } = await supabase
-        .from('priority_item')
-        .select('*')
-        .order('rank', { ascending: true });
-
-      if (data && data.length > 0) {
-        setItems(data);
-      } else {
-        const saved = localStorage.getItem('sukahaji_priority_items_v3');
-        if (saved) setItems(JSON.parse(saved));
+      const res = await fetch('/api/sync/priority-items');
+      const result = await res.json();
+      if (result.success && result.data && result.data.length > 0) {
+        setItems(result.data);
+        localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(result.data));
+        return;
       }
-    } catch {
-      const saved = localStorage.getItem('sukahaji_priority_items_v3');
-      if (saved) setItems(JSON.parse(saved));
-    }
+    } catch {}
+
+    const saved = localStorage.getItem('sukahaji_priority_items_v3');
+    if (saved) setItems(JSON.parse(saved));
   };
 
   const syncItemsToSupabase = async (updatedItems: PriorityItem[]) => {
     localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(updatedItems));
     try {
-      await supabase.from('priority_item').upsert(updatedItems);
+      await fetch('/api/sync/priority-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: updatedItems })
+      });
     } catch (e) {
-      console.error('Failed to sync priority_item to Supabase:', e);
+      console.error('Failed to sync priority_item to Cloud API:', e);
     }
   };
+
 
 
   const handleScoreUSG = (id: string, field: 'urgency' | 'seriousness' | 'growth', val: number) => {
@@ -3942,27 +3941,24 @@ function DokumentasiGalleryView() {
 
   const fetchPrograms = async () => {
     try {
-      const { data } = await supabase.from('program').select('*').order('created_at', { ascending: false });
-      if (data && data.length > 0) {
-        setPrograms(data);
-        setSelectedProgId(data[0].id);
-      } else {
-        const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-        if (savedProgs) {
-          const parsed = JSON.parse(savedProgs);
-          setPrograms(parsed);
-          if (parsed.length > 0) setSelectedProgId(parsed[0].id);
-        }
+      const res = await fetch('/api/sync/programs');
+      const result = await res.json();
+      if (result.success && result.data && result.data.length > 0) {
+        setPrograms(result.data);
+        setSelectedProgId(result.data[0].id);
+        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
+        return;
       }
-    } catch {
-      const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-      if (savedProgs) {
-        const parsed = JSON.parse(savedProgs);
-        setPrograms(parsed);
-        if (parsed.length > 0) setSelectedProgId(parsed[0].id);
-      }
+    } catch {}
+
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    if (savedProgs) {
+      const parsed = JSON.parse(savedProgs);
+      setPrograms(parsed);
+      if (parsed.length > 0) setSelectedProgId(parsed[0].id);
     }
   };
+
 
 
   const activeProg = programs.find((p: any) => p.id === selectedProgId);
