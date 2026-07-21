@@ -1,52 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getGoogleAccessToken } from '@/lib/googleAuth';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Upload fallback ke Supabase Storage jika Google Drive melempar storageQuotaExceeded
-async function uploadToSupabaseStorage(
-  base64Data: string,
-  filename: string,
-  mimeType: string
-): Promise<{ viewUrl: string; downloadUrl: string; driveUrl: string; type: string }> {
-  const isVideo = mimeType.startsWith('video/');
-  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
-    throw new Error('Supabase Storage credentials belum dikonfigurasi');
-  }
-
-  const supabaseServer = createClient(supabaseUrl, supabaseKey);
-  const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
-  const buffer = Buffer.from(cleanBase64, 'base64');
-  const filePath = `program_kerja/${Date.now()}_${filename}`;
-
-  // Upload ke bucket 'dokumentasi' (atau buat jika belum ada)
-  const { error: uploadError } = await supabaseServer.storage
-    .from('dokumentasi')
-    .upload(filePath, buffer, {
-      contentType: mimeType,
-      upsert: true
-    });
-
-  if (uploadError) {
-    // Jika bucket 'dokumentasi' belum publik/ada, coba bucket default
-    console.warn('[Supabase Storage] Bucket "dokumentasi" upload warning:', uploadError.message);
-  }
-
-  const { data: urlData } = supabaseServer.storage
-    .from('dokumentasi')
-    .getPublicUrl(filePath);
-
-  const publicUrl = urlData?.publicUrl || `${supabaseUrl}/storage/v1/object/public/dokumentasi/${filePath}`;
-
-  return {
-    viewUrl: publicUrl,
-    downloadUrl: publicUrl,
-    driveUrl: publicUrl,
-    type: isVideo ? 'video' : 'image'
-  };
-}
 
 // Cari atau buat folder di Google Drive
 async function getOrCreateFolder(name: string, parentId: string, token: string): Promise<string> {
@@ -79,7 +32,6 @@ async function uploadFileToDrive(
   parentFolderId: string,
   token: string
 ): Promise<string> {
-  // Hapus prefix data URI (data:image/jpeg;base64, atau data:video/mp4;base64,)
   const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
 
   const metadata = { name: filename, mimeType, parents: [parentFolderId] };
@@ -109,7 +61,7 @@ async function uploadFileToDrive(
 
   const file = await res.json();
 
-  // Set permission: siapapun dengan link bisa lihat (viewer)
+  // Set permission: siapapun dengan link bisa lihat
   await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions?supportsAllDrives=true&supportsTeamDrives=true`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -119,16 +71,29 @@ async function uploadFileToDrive(
   return file.id;
 }
 
-// Buat URL untuk tampil & download dari Drive file ID
-function buildDriveUrls(fileId: string, mimeType: string) {
+// Buat URL untuk tampil & download dari Drive file ID atau DataURI tanpa error 404 Supabase Storage
+function buildMediaUrls(fileId: string | null, base64Data: string, mimeType: string) {
   const isVideo = mimeType.startsWith('video/');
+  
+  if (fileId) {
+    return {
+      fileId,
+      // Universal Direct Image/Thumbnail View URL (tidak perlu bucket Supabase)
+      viewUrl: isVideo
+        ? `https://drive.google.com/file/d/${fileId}/preview`
+        : `https://lh3.googleusercontent.com/d/${fileId}`,
+      downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
+      driveUrl: `https://drive.google.com/file/d/${fileId}/view`,
+      type: isVideo ? 'video' : 'image'
+    };
+  }
+
+  // Safe DataURI Fallback: jika Drive tidak merespons, gunakan DataURI langsung agar 100% tampil & bisa didownload
   return {
-    fileId,
-    viewUrl: isVideo
-      ? `https://drive.google.com/file/d/${fileId}/preview`
-      : `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`,
-    downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
-    driveUrl: `https://drive.google.com/file/d/${fileId}/view`,
+    fileId: null,
+    viewUrl: base64Data,
+    downloadUrl: base64Data,
+    driveUrl: base64Data,
     type: isVideo ? 'video' : 'image'
   };
 }
@@ -157,7 +122,7 @@ export async function POST(req: NextRequest) {
           : programKerjaFolder;
       }
     } catch (authErr: any) {
-      console.warn('[Program Kerja Upload] Google Drive Auth warning, akan mencoba Supabase Storage fallback:', authErr.message);
+      console.warn('[Program Kerja Upload] Google Auth warning:', authErr.message);
     }
 
     const results = [];
@@ -182,22 +147,15 @@ export async function POST(req: NextRequest) {
       if (token && targetFolder) {
         try {
           const fileId = await uploadFileToDrive(photoData, filename, mimeType, targetFolder, token);
-          uploadedItem = buildDriveUrls(fileId, mimeType);
+          uploadedItem = buildMediaUrls(fileId, photoData, mimeType);
         } catch (driveErr: any) {
-          console.warn(`[Program Kerja Upload] Drive upload warning untuk file ke-${i + 1} (${driveErr.message}), beralih ke Supabase Storage...`);
+          console.warn(`[Program Kerja Upload] Drive upload warning (${driveErr.message}), beralih ke safe DataURI fallback...`);
         }
       }
 
-      // 2. Fallback otomatis ke Supabase Storage jika Drive gagal/kena kuota 403
+      // 2. Safe Fallback DataURI jika Drive menolak
       if (!uploadedItem) {
-        try {
-          uploadedItem = await uploadToSupabaseStorage(photoData, filename, mimeType);
-        } catch (supabaseErr: any) {
-          console.error(`[Program Kerja Upload] Supabase Storage upload error:`, supabaseErr.message);
-          return NextResponse.json({
-            error: `Gagal upload file ke-${i + 1}: ${supabaseErr.message}`
-          }, { status: 500 });
-        }
+        uploadedItem = buildMediaUrls(null, photoData, mimeType);
       }
 
       results.push(uploadedItem);
@@ -207,7 +165,7 @@ export async function POST(req: NextRequest) {
       success: true,
       urls: results,
       driveConfigured: true,
-      message: `${results.length} file berhasil disimpan di cloud storage`
+      message: `${results.length} media berhasil diproses`
     });
 
   } catch (err: any) {
@@ -215,4 +173,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || 'Gagal upload program kerja' }, { status: 500 });
   }
 }
-

@@ -131,9 +131,67 @@ function DashboardSPA() {
     }
   }, [searchParams]);
 
+  // Auto-backup data lokal (localStorage sebelumnya) ke Supabase Database Cloud
+  useEffect(() => {
+    const autoMigrateLocalStorageToCloud = async () => {
+      try {
+        // 1. Backup Siklus 1 (sticky_note)
+        const localNotes = localStorage.getItem('sukahaji_sticky_notes');
+        if (localNotes) {
+          const parsed = JSON.parse(localNotes);
+          if (parsed.length > 0) {
+            await supabase.from('sticky_note').upsert(parsed.map((n: any) => ({
+              column_name: n.column_name || 'Lainnya',
+              content: n.content,
+              color: n.color || '#FEF08A',
+              rt_number: n.rt_number || 'Umum',
+              author: n.author || 'Anonim'
+            })));
+          }
+        }
+
+        // 2. Backup Siklus 3 (priority_item)
+        const localPriority = localStorage.getItem('sukahaji_priority_items_v3');
+        if (localPriority) {
+          const parsed = JSON.parse(localPriority);
+          if (parsed.length > 0) {
+            await supabase.from('priority_item').upsert(parsed);
+          }
+        }
+
+        // 3. Backup Siklus 4 (program)
+        const localProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+        if (localProgs) {
+          const parsed = JSON.parse(localProgs);
+          if (parsed.length > 0) {
+            await supabase.from('program').upsert(parsed);
+          }
+        }
+
+        // 4. Backup Draf Sensus
+        const localDrafts = localStorage.getItem('survey_drafts');
+        if (localDrafts) {
+          const drafts = JSON.parse(localDrafts);
+          if (drafts.length > 0) {
+            await fetch('/api/surveys/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ surveys: drafts })
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[Auto-Backup Cloud] Warning:', err);
+      }
+    };
+
+    autoMigrateLocalStorageToCloud();
+  }, []);
+
   useEffect(() => {
     updateDraftCount();
   }, []);
+
 
   const updateDraftCount = () => {
     if (typeof window !== 'undefined') {
@@ -3871,18 +3929,38 @@ function DokumentasiGalleryView() {
 
   const mediaItems = activeProg?.photo_urls?.map(normalizeMedia) || [];
 
-  // Download semua: buka satu per satu dengan delay
+  // Helper pendownload file fisik (foto/video) aman
+  const downloadSingleMedia = (media: any, index: number) => {
+    const filename = `dokumentasi_${activeProg?.name?.replace(/\s+/g, '_') || 'kkn'}_${index + 1}.${media.type === 'video' ? 'mp4' : 'jpg'}`;
+    const url = media.downloadUrl || media.viewUrl;
+
+    if (url.startsWith('data:')) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  // Download semua: unduh satu per satu secara berurutan
   const handleDownloadAll = () => {
     mediaItems.forEach((media: any, i: number) => {
       setTimeout(() => {
-        const a = document.createElement('a');
-        a.href = media.downloadUrl;
-        a.target = '_blank';
-        a.rel = 'noreferrer';
-        a.click();
-      }, i * 800);
+        downloadSingleMedia(media, i);
+      }, i * 600);
     });
   };
+
 
   return (
     <div className="space-y-6">
@@ -3993,15 +4071,14 @@ function DokumentasiGalleryView() {
                         >
                           🔗
                         </a>
-                        <a
-                          href={media.downloadUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Download"
-                          className="text-[10px] text-slate-500 hover:text-blue-700 p-1 rounded transition font-bold"
+                        <button
+                          onClick={() => downloadSingleMedia(media, index)}
+                          title="Download File"
+                          className="text-[10px] text-slate-500 hover:text-blue-700 p-1 rounded transition font-bold cursor-pointer"
                         >
                           ⬇
-                        </a>
+                        </button>
+
                       </div>
                     </div>
                   </div>
