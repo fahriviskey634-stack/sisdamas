@@ -3,7 +3,7 @@ import { getGoogleAccessToken } from '@/lib/googleAuth';
 
 // Cari atau buat folder di Google Drive
 async function getOrCreateFolder(name: string, parentId: string, token: string): Promise<string> {
-  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.folder'+and+name='${encodeURIComponent(name)}'+and+'${parentId}'+in+parents+and+trashed=false&fields=files(id)`;
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?includeItemsFromAllDrives=true&supportsAllDrives=true&supportsTeamDrives=true&q=mimeType='application/vnd.google-apps.folder'+and+name='${encodeURIComponent(name)}'+and+'${parentId}'+in+parents+and+trashed=false&fields=files(id)`;
   const searchRes = await fetch(searchUrl, {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -11,7 +11,7 @@ async function getOrCreateFolder(name: string, parentId: string, token: string):
     const searchData = await searchRes.json();
     if (searchData.files && searchData.files.length > 0) return searchData.files[0].id;
   }
-  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&supportsTeamDrives=true', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
@@ -46,7 +46,7 @@ async function uploadFileToDrive(
     Buffer.from(footer, 'utf8')
   ]);
 
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&supportsTeamDrives=true', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -63,7 +63,7 @@ async function uploadFileToDrive(
   const file = await res.json();
 
   // Set permission: siapapun dengan link bisa lihat (viewer)
-  await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`, {
+  await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions?supportsAllDrives=true&supportsTeamDrives=true`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ role: 'reader', type: 'anyone' })
@@ -71,6 +71,7 @@ async function uploadFileToDrive(
 
   return file.id;
 }
+
 
 // Buat URL untuk tampil & download dari Drive file ID
 function buildDriveUrls(fileId: string, mimeType: string) {

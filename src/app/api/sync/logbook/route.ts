@@ -90,7 +90,7 @@ async function uploadFileToDrive(base64Data: string, filename: string, mimeType:
     Buffer.from(footer, 'utf8')
   ]);
 
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&supportsTeamDrives=true', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -108,11 +108,12 @@ async function uploadFileToDrive(base64Data: string, filename: string, mimeType:
 
   // Set permission: siapapun dengan link bisa lihat
   try {
-    await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`, {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions?supportsAllDrives=true&supportsTeamDrives=true`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
+
   } catch (e) {
     console.error('[Logbook] Gagal set permission Drive:', e);
   }

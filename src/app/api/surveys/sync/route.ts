@@ -100,7 +100,7 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
       Buffer.from(footer, 'utf8')
     ]);
 
-    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&supportsTeamDrives=true', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -119,7 +119,7 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
 
     // Set permission to anyone with link viewable
     try {
-      await fetch(`https://www.googleapis.com/drive/v3/files/${driveFile.id}/permissions`, {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${driveFile.id}/permissions?supportsAllDrives=true&supportsTeamDrives=true`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -130,6 +130,7 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
           type: 'anyone'
         })
       });
+
     } catch (permErr) {
       console.error("Failed to set permission on Drive file:", permErr);
     }
