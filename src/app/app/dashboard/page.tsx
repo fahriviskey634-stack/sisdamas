@@ -434,17 +434,30 @@ function DashboardSPA() {
 // -------------------------------------------------------------
 // SUB-VIEW 1: Dashboard View Component (Highly Interactive Statistics with RT Targets Configuration)
 // -------------------------------------------------------------
+// Data Target Sensus per RT — Dusun 2, Desa Sukahaji (Sumber: GKSTTB 2026)
+// Dusun 2: 3.165 jiwa, ~1.031 KK | RW 01 (4 RT), RW 05 (4 RT), RW 06 (4 RT), RW 11 (3 RT)
 const DEFAULT_RT_TARGETS = [
-  { id: '1', rw: 'RW 01', rt: 'RT 01', target_kk: 40, target_warga: 160 },
-  { id: '2', rw: 'RW 01', rt: 'RT 02', target_kk: 35, target_warga: 140 },
-  { id: '3', rw: 'RW 01', rt: 'RT 03', target_kk: 45, target_warga: 180 },
-  { id: '4', rw: 'RW 02', rt: 'RT 01', target_kk: 30, target_warga: 120 },
-  { id: '5', rw: 'RW 02', rt: 'RT 02', target_kk: 40, target_warga: 160 },
-  { id: '6', rw: 'RW 02', rt: 'RT 03', target_kk: 50, target_warga: 200 },
-  { id: '7', rw: 'RW 03', rt: 'RT 01', target_kk: 35, target_warga: 140 },
-  { id: '8', rw: 'RW 03', rt: 'RT 02', target_kk: 35, target_warga: 140 },
-  { id: '9', rw: 'RW 03', rt: 'RT 03', target_kk: 50, target_warga: 200 }
+  // RW 01 — 4 RT ≈ 855 jiwa, 278 KK
+  { id: '1',  rw: 'RW 01', rt: 'RT 01', target_kk: 72, target_warga: 215 },
+  { id: '2',  rw: 'RW 01', rt: 'RT 02', target_kk: 70, target_warga: 215 },
+  { id: '3',  rw: 'RW 01', rt: 'RT 03', target_kk: 70, target_warga: 215 },
+  { id: '4',  rw: 'RW 01', rt: 'RT 04', target_kk: 66, target_warga: 210 },
+  // RW 05 — 4 RT ≈ 820 jiwa, 266 KK
+  { id: '5',  rw: 'RW 05', rt: 'RT 01', target_kk: 68, target_warga: 210 },
+  { id: '6',  rw: 'RW 05', rt: 'RT 02', target_kk: 66, target_warga: 205 },
+  { id: '7',  rw: 'RW 05', rt: 'RT 03', target_kk: 66, target_warga: 205 },
+  { id: '8',  rw: 'RW 05', rt: 'RT 04', target_kk: 66, target_warga: 200 },
+  // RW 06 — 4 RT ≈ 820 jiwa, 265 KK
+  { id: '9',  rw: 'RW 06', rt: 'RT 01', target_kk: 68, target_warga: 210 },
+  { id: '10', rw: 'RW 06', rt: 'RT 02', target_kk: 66, target_warga: 205 },
+  { id: '11', rw: 'RW 06', rt: 'RT 03', target_kk: 66, target_warga: 205 },
+  { id: '12', rw: 'RW 06', rt: 'RT 04', target_kk: 65, target_warga: 200 },
+  // RW 11 — 3 RT ≈ 670 jiwa, 222 KK
+  { id: '13', rw: 'RW 11', rt: 'RT 01', target_kk: 75, target_warga: 225 },
+  { id: '14', rw: 'RW 11', rt: 'RT 02', target_kk: 75, target_warga: 225 },
+  { id: '15', rw: 'RW 11', rt: 'RT 03', target_kk: 72, target_warga: 220 },
 ];
+
 
 function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncDrafts, rtTargets, setRtTargets }: any) {
   const [selectedRw, setSelectedRw] = useState('All');
@@ -607,8 +620,8 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
   const totalKK = filteredSurveys.length;
   const totalWarga = filteredSurveys.reduce((acc: number, curr: any) => acc + curr.family_size, 0);
 
-  const totalTargetKK = filteredTargets.reduce((acc: number, curr: any) => acc + curr.target_kk, 0) || 120;
-  const totalTargetWarga = filteredTargets.reduce((acc: number, curr: any) => acc + curr.target_warga, 0) || 480;
+  const totalTargetKK = filteredTargets.reduce((acc: number, curr: any) => acc + curr.target_kk, 0) || 1031;
+  const totalTargetWarga = filteredTargets.reduce((acc: number, curr: any) => acc + curr.target_warga, 0) || 3165;
 
   const progressPercent = Math.round((totalKK / totalTargetKK) * 100);
   const citizensProgressPercent = Math.round((totalWarga / totalTargetWarga) * 100);
@@ -737,9 +750,10 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
                   className="rounded-xl border border-slate-250 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-teal-sedang transition font-bold"
                 >
                   <option value="All">Semua RW</option>
-                  <option value="RW 01">RW 01</option>
-                  <option value="RW 02">RW 02</option>
-                  <option value="RW 03">RW 03</option>
+                  <option value="RW 01">RW 01 (Dusun 2)</option>
+                  <option value="RW 05">RW 05 (Dusun 2)</option>
+                  <option value="RW 06">RW 06 (Dusun 2)</option>
+                  <option value="RW 11">RW 11 (Dusun 2)</option>
                 </select>
               </div>
               <div>
@@ -752,6 +766,7 @@ function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncD
                   <option value="RT 01">RT 01</option>
                   <option value="RT 02">RT 02</option>
                   <option value="RT 03">RT 03</option>
+                  <option value="RT 04">RT 04</option>
                 </select>
               </div>
             </div>
@@ -1255,8 +1270,11 @@ function Siklus4View() {
   const [newProgress, setNewProgress] = useState(0);
   const [newDesc, setNewDesc] = useState('');
   const [newEval, setNewEval] = useState('');
-  const [newPhotos, setNewPhotos] = useState<string[]>([]);
+  const [newMediaFiles, setNewMediaFiles] = useState<File[]>([]); // File objects untuk preview
+  const [newPhotos, setNewPhotos] = useState<string[]>([]);        // base64 DataURIs untuk upload
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]); // blob URLs untuk preview lokal
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadError, setUploadError] = useState<string>('');
   const [editingProg, setEditingProg] = useState<any | null>(null);
 
   // Load programs & priority problems from localStorage
@@ -1295,8 +1313,10 @@ function Siklus4View() {
     setNewDesc(prog.description || '');
     setNewEval(prog.evaluation || '');
     setNewPhotos([]);
+    setPhotoPreviews([]);
+    setNewMediaFiles([]);
+    setUploadError('');
     setShowAddForm(true);
-    // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1312,6 +1332,9 @@ function Siklus4View() {
     setNewProgress(0);
     setNewStatus('Planned');
     setNewPhotos([]);
+    setPhotoPreviews([]);
+    setNewMediaFiles([]);
+    setUploadError('');
     setEditingProg(null);
     setShowAddForm(false);
   };
@@ -1319,25 +1342,44 @@ function Siklus4View() {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!newName) return;
-
+    setUploadError('');
     setUploadingPhotos(true);
-    let uploadedUrls: string[] = [];
+
+    // Array Drive URL objects yang akan disimpan
+    let driveUrls: any[] = [];
 
     if (newPhotos.length > 0) {
       try {
         const res = await fetch('/api/sync/program-kerja', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photos: newPhotos })
+          body: JSON.stringify({
+            photos: newPhotos,
+            programName: newName
+          })
         });
-        if (res.ok) {
-          const data = await res.json();
-          uploadedUrls = data.urls || [];
+        const data = await res.json();
+        if (!res.ok) {
+          // Drive belum aktif atau error
+          setUploadError(data.error || 'Gagal upload ke Google Drive.');
+          setUploadingPhotos(false);
+          return;
         }
-      } catch (err) {
-        console.error("Gagal mengunggah foto dokumentasi ke Google Drive:", err);
+        driveUrls = data.urls || [];
+      } catch (err: any) {
+        setUploadError(`Koneksi gagal: ${err.message}`);
+        setUploadingPhotos(false);
+        return;
       }
     }
+
+    // Ekstrak viewUrl saja untuk disimpan ke photo_urls (hanya string URL, bukan base64)
+    const newViewUrls = driveUrls.map((u: any) => ({
+      viewUrl: u.viewUrl,
+      downloadUrl: u.downloadUrl,
+      driveUrl: u.driveUrl,
+      type: u.type || 'image'
+    }));
 
     if (editingProg) {
       const updatedProg = {
@@ -1354,10 +1396,10 @@ function Siklus4View() {
         progress: Number(newProgress) || 0,
         description: newDesc,
         evaluation: newEval,
-        photo_urls: [...(editingProg.photo_urls || []), ...uploadedUrls]
+        // Gabungkan foto lama + foto baru (semua berupa Drive URL objects)
+        photo_urls: [...(editingProg.photo_urls || []), ...newViewUrls]
       };
-
-      const updated = programs.map(p => p.id === editingProg.id ? updatedProg : p);
+      const updated = programs.map((p: any) => p.id === editingProg.id ? updatedProg : p);
       setPrograms(updated);
       localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
       setEditingProg(null);
@@ -1376,15 +1418,14 @@ function Siklus4View() {
         progress: Number(newProgress) || 0,
         description: newDesc,
         evaluation: newEval,
-        photo_urls: uploadedUrls
+        photo_urls: newViewUrls
       };
-
       const updated = [newProg, ...programs];
       setPrograms(updated);
       localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
     }
 
-    // Clear form
+    // Bersihkan form
     setNewName('');
     setNewVolume('');
     setNewFrequency('');
@@ -1396,6 +1437,8 @@ function Siklus4View() {
     setNewProgress(0);
     setNewStatus('Planned');
     setNewPhotos([]);
+    setPhotoPreviews([]);
+    setNewMediaFiles([]);
     setUploadingPhotos(false);
     setShowAddForm(false);
   };
@@ -1591,37 +1634,73 @@ function Siklus4View() {
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-3">
-            <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Dokumentasi Foto Kegiatan (Multiple Upload)</label>
+          <div className="border-t border-slate-100 pt-3 space-y-3">
+            <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Dokumentasi Foto / Video Kegiatan (Upload ke Google Drive)</label>
+            
+            {/* Error Drive */}
+            {uploadError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold flex items-start gap-2">
+                <span>⚠️</span>
+                <span>{uploadError}</span>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-3">
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,video/*"
                 onChange={(e) => {
                   const files = e.target.files;
                   if (files && files.length > 0) {
                     const fileList = Array.from(files);
-                    const readPromises = fileList.map(file => {
-                      return new Promise<string>((resolve) => {
+                    setNewMediaFiles(fileList);
+                    // Buat blob URL untuk preview lokal (tidak simpan base64)
+                    const blobPreviews = fileList.map(f => URL.createObjectURL(f));
+                    setPhotoPreviews(blobPreviews);
+                    // Baca sebagai base64 untuk upload ke Drive API
+                    const readPromises = fileList.map(file =>
+                      new Promise<string>(resolve => {
                         const reader = new FileReader();
                         reader.onloadend = () => resolve(reader.result as string);
                         reader.readAsDataURL(file);
-                      });
-                    });
+                      })
+                    );
                     Promise.all(readPromises).then(results => {
                       setNewPhotos(results);
+                      setUploadError('');
                     });
                   }
                 }}
                 className="text-xxs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xxs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
               />
-              {newPhotos.length > 0 && (
-                <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-150 font-bold animate-pulse">
-                  📎 {newPhotos.length} File Terpilih
+              {photoPreviews.length > 0 && (
+                <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-150 font-bold">
+                  📎 {photoPreviews.length} File Dipilih
                 </span>
               )}
             </div>
+
+            {/* Preview grid sebelum upload (blob URL) */}
+            {photoPreviews.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 mt-2">
+                {photoPreviews.map((previewUrl, idx) => (
+                  <div key={idx} className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 aspect-square">
+                    {newMediaFiles[idx]?.type.startsWith('video/') ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px] font-bold p-1">
+                        <span className="text-2xl">🎥</span>
+                        <span className="truncate w-full text-center">{newMediaFiles[idx].name}</span>
+                      </div>
+                    ) : (
+                      <img src={previewUrl} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                    )}
+                    <span className="absolute bottom-0 left-0 right-0 bg-slate-900/60 text-white text-[8px] font-bold text-center py-0.5">
+                      {newMediaFiles[idx]?.type.startsWith('video/') ? '🎥 Video' : '📷 Foto'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end pt-2">
@@ -2111,16 +2190,27 @@ function SurveyWizardView({ switchTab, updateDraftCount, currentUser }: any) {
               }}
               className="w-full rounded-lg border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs outline-none focus:border-transisi"
             >
-              <option value="rt000101-0000-0000-0000-000000000001">RT 01 / RW 01 (Dusun 2)</option>
-              <option value="rt000102-0000-0000-0000-000000000002">RT 02 / RW 01 (Dusun 2)</option>
-              <option value="rt000103-0000-0000-0000-000000000003">RT 03 / RW 01 (Dusun 2)</option>
-              <option value="rt000201-0000-0000-0000-000000000004">RT 01 / RW 02 (Dusun 2)</option>
-              <option value="rt000202-0000-0000-0000-000000000005">RT 02 / RW 02 (Dusun 2)</option>
-              <option value="rt000203-0000-0000-0000-000000000006">RT 03 / RW 02 (Dusun 2)</option>
-              <option value="rt000301-0000-0000-0000-000000000007">RT 01 / RW 03 (Dusun 2)</option>
-              <option value="rt000302-0000-0000-0000-000000000008">RT 02 / RW 03 (Dusun 2)</option>
-              <option value="rt000303-0000-0000-0000-000000000009">RT 03 / RW 03 (Dusun 2)</option>
+              {/* RW 01 — 4 RT */}
+              <option value="rt010101-0000-0000-0000-000000000001">RT 01 / RW 01 (Dusun 2)</option>
+              <option value="rt010102-0000-0000-0000-000000000002">RT 02 / RW 01 (Dusun 2)</option>
+              <option value="rt010103-0000-0000-0000-000000000003">RT 03 / RW 01 (Dusun 2)</option>
+              <option value="rt010104-0000-0000-0000-000000000004">RT 04 / RW 01 (Dusun 2)</option>
+              {/* RW 05 — 4 RT */}
+              <option value="rt050101-0000-0000-0000-000000000005">RT 01 / RW 05 (Dusun 2)</option>
+              <option value="rt050102-0000-0000-0000-000000000006">RT 02 / RW 05 (Dusun 2)</option>
+              <option value="rt050103-0000-0000-0000-000000000007">RT 03 / RW 05 (Dusun 2)</option>
+              <option value="rt050104-0000-0000-0000-000000000008">RT 04 / RW 05 (Dusun 2)</option>
+              {/* RW 06 — 4 RT */}
+              <option value="rt060101-0000-0000-0000-000000000009">RT 01 / RW 06 (Dusun 2)</option>
+              <option value="rt060102-0000-0000-0000-000000000010">RT 02 / RW 06 (Dusun 2)</option>
+              <option value="rt060103-0000-0000-0000-000000000011">RT 03 / RW 06 (Dusun 2)</option>
+              <option value="rt060104-0000-0000-0000-000000000012">RT 04 / RW 06 (Dusun 2)</option>
+              {/* RW 11 — 3 RT */}
+              <option value="rt110101-0000-0000-0000-000000000013">RT 01 / RW 11 (Dusun 2)</option>
+              <option value="rt110102-0000-0000-0000-000000000014">RT 02 / RW 11 (Dusun 2)</option>
+              <option value="rt110103-0000-0000-0000-000000000015">RT 03 / RW 11 (Dusun 2)</option>
             </select>
+
           </div>
           <button onClick={() => setWStep(2)} disabled={!kkName.trim()} className="rounded-lg bg-teal-sedang hover:bg-kabut text-white font-semibold px-4 py-2 text-xs flex items-center gap-1.5 ml-auto disabled:opacity-50">
             Lanjut <ArrowRight className="h-3.5 w-3.5" />
@@ -2564,23 +2654,58 @@ function LogbookView({ currentUser }: { currentUser: any }) {
                       <td className="px-2 md:px-4 py-2 md:py-3 text-center font-bold text-slate-400">{index + 1}</td>
                       <td className="px-2 md:px-4 py-2 md:py-3 font-semibold text-slate-700">{act.kegiatan}</td>
                       <td className="px-2 md:px-4 py-2 md:py-3 text-slate-600">{act.output}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-500 text-xxs font-bold">
-                          {act.bukti_foto_url.startsWith('[') ? (
-                            (() => {
-                              try {
-                                return `📷 ${JSON.parse(act.bukti_foto_url).length} Foto`;
-                              } catch {
-                                return '📷 Foto Terlampir';
-                              }
-                            })()
-                          ) : act.bukti_foto_url.startsWith('data:image') ? (
-                            '📷 1 Foto'
-                          ) : (
-                            act.bukti_foto_url
-                          )}
-                        </span>
+                      <td className="px-2 py-2 text-center min-w-[80px]">
+                        {act.bukti_foto_url ? (() => {
+                          // Parse: bisa JSON array atau single URL
+                          let urls: string[] = [];
+                          try {
+                            if (act.bukti_foto_url.startsWith('[')) {
+                              urls = JSON.parse(act.bukti_foto_url);
+                            } else {
+                              urls = [act.bukti_foto_url];
+                            }
+                          } catch { urls = [act.bukti_foto_url]; }
+
+                          // Tampilkan thumbnail dari Drive URL (atau base64 lama)
+                          return (
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {urls.slice(0, 3).map((url, uidx) => (
+                                <div key={uidx} className="relative group">
+                                  {url.startsWith('https://drive.google.com/') || url.startsWith('https://lh3.') ? (
+                                    <img
+                                      src={url}
+                                      alt={`Foto ${uidx + 1}`}
+                                      className="w-10 h-10 object-cover rounded cursor-zoom-in border border-slate-200 hover:border-teal-400 transition"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling?.setAttribute('style', 'display:flex');
+                                      }}
+                                      onClick={() => window.open(url, '_blank')}
+                                    />
+                                  ) : url.startsWith('data:image') ? (
+                                    <img
+                                      src={url}
+                                      alt={`Foto ${uidx + 1}`}
+                                      className="w-10 h-10 object-cover rounded cursor-zoom-in border border-slate-200"
+                                      onClick={() => window.open(url, '_blank')}
+                                    />
+                                  ) : (
+                                    <span className="text-[9px] text-slate-400 font-bold">📷</span>
+                                  )}
+                                </div>
+                              ))}
+                              {urls.length > 3 && (
+                                <span className="w-10 h-10 flex items-center justify-center text-[8px] font-black text-slate-500 bg-slate-100 rounded border border-slate-200">
+                                  +{urls.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })() : (
+                          <span className="text-[9px] text-slate-300 italic">–</span>
+                        )}
                       </td>
+
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => handleRemoveRow(act.id)}
@@ -3547,26 +3672,65 @@ function ProfileView({ handleLogout, rtTargets, setRtTargets }: any) {
 function DokumentasiGalleryView() {
   const [programs, setPrograms] = useState<any[]>([]);
   const [selectedProgId, setSelectedProgId] = useState<string>('');
+  const [lightboxUrl, setLightboxUrl] = useState<string>('');
+  const [lightboxType, setLightboxType] = useState<string>('image');
 
   useEffect(() => {
     const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
     if (savedProgs) {
       const parsed = JSON.parse(savedProgs);
       setPrograms(parsed);
-      if (parsed.length > 0) {
-        setSelectedProgId(parsed[0].id);
-      }
+      if (parsed.length > 0) setSelectedProgId(parsed[0].id);
     }
   }, []);
 
-  const activeProg = programs.find(p => p.id === selectedProgId);
+  const activeProg = programs.find((p: any) => p.id === selectedProgId);
+
+  // Normalisasi photo_urls: bisa berupa string (URL lama) atau object {viewUrl, downloadUrl, type}
+  const normalizeMedia = (item: any): { viewUrl: string; downloadUrl: string; driveUrl: string; type: string } => {
+    if (typeof item === 'string') {
+      return { viewUrl: item, downloadUrl: item, driveUrl: item, type: 'image' };
+    }
+    return {
+      viewUrl: item.viewUrl || item,
+      downloadUrl: item.downloadUrl || item.viewUrl || item,
+      driveUrl: item.driveUrl || item.viewUrl || item,
+      type: item.type || 'image'
+    };
+  };
+
+  const mediaItems = activeProg?.photo_urls?.map(normalizeMedia) || [];
+
+  // Download semua: buka satu per satu dengan delay
+  const handleDownloadAll = () => {
+    mediaItems.forEach((media: any, i: number) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = media.downloadUrl;
+        a.target = '_blank';
+        a.rel = 'noreferrer';
+        a.click();
+      }, i * 800);
+    });
+  };
 
   return (
     <div className="space-y-6">
+      {/* Header + Program Selector */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
-        <div>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">📸 Galeri Dokumentasi Program Kerja KKN</h2>
-          <p className="text-[10px] text-slate-450 mt-0.5">Pilih program kerja untuk melihat seluruh foto dokumentasi yang di-backup ke Google Drive.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">📸 Galeri Dokumentasi Program Kerja KKN</h2>
+            <p className="text-[10px] text-slate-450 mt-0.5">Foto & video program kerja yang tersimpan di Google Drive. Klik gambar untuk fullscreen.</p>
+          </div>
+          {mediaItems.length > 0 && (
+            <button
+              onClick={handleDownloadAll}
+              className="rounded-xl bg-slate-700 hover:bg-slate-900 text-white text-[10px] font-bold px-4 py-2 flex items-center gap-1.5 cursor-pointer shadow-sm transition whitespace-nowrap"
+            >
+              ⬇ Download Semua ({mediaItems.length})
+            </button>
+          )}
         </div>
 
         <div className="max-w-md">
@@ -3576,7 +3740,7 @@ function DokumentasiGalleryView() {
             onChange={(e) => setSelectedProgId(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
           >
-            {programs.map(p => (
+            {programs.map((p: any) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
             {programs.length === 0 && (
@@ -3586,8 +3750,10 @@ function DokumentasiGalleryView() {
         </div>
       </div>
 
+      {/* Media Grid */}
       {activeProg ? (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-6">
+          {/* Program info */}
           <div className="border-b border-slate-100 pb-4">
             <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wide">{activeProg.name}</h3>
             <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px]">
@@ -3596,28 +3762,78 @@ function DokumentasiGalleryView() {
               <span className="text-slate-500">Status: <strong className="text-slate-700">{activeProg.status} ({activeProg.progress}%)</strong></span>
               <span className="h-3 w-px bg-slate-200" />
               <span className="text-slate-500">Lokasi: <strong className="text-slate-700">{activeProg.location}</strong></span>
+              <span className="h-3 w-px bg-slate-200" />
+              <span className="font-bold text-teal-700 bg-teal-50 border border-teal-150 px-2 py-0.5 rounded-full">
+                {mediaItems.length} Media
+              </span>
             </div>
           </div>
 
-          {activeProg.photo_urls && activeProg.photo_urls.length > 0 ? (
+          {mediaItems.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {activeProg.photo_urls.map((url: string, index: number) => (
+              {mediaItems.map((media: any, index: number) => (
                 <div key={index} className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-sm hover:shadow-md transition">
-                  <img
-                    src={url}
-                    alt={`Dokumentasi ${index + 1}`}
-                    className="w-full h-44 object-cover"
-                  />
-                  <div className="p-3 bg-white border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-655">Foto Dokumentasi #{index + 1}</span>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] text-teal-650 hover:text-teal-850 font-bold flex items-center gap-0.5"
-                    >
-                      Buka Drive ↗
-                    </a>
+                  {/* Media preview */}
+                  {media.type === 'video' ? (
+                    <div className="w-full h-44 bg-slate-800 flex flex-col items-center justify-center gap-2 cursor-pointer"
+                      onClick={() => { setLightboxUrl(media.driveUrl || media.viewUrl); setLightboxType('video'); }}>
+                      <span className="text-4xl">🎥</span>
+                      <span className="text-white text-[10px] font-bold">Klik untuk putar</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={media.viewUrl}
+                      alt={`Dokumentasi ${index + 1}`}
+                      className="w-full h-44 object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.querySelector('.img-fallback')?.setAttribute('style', 'display:flex');
+                      }}
+                      onClick={() => { setLightboxUrl(media.viewUrl); setLightboxType('image'); }}
+                    />
+                  )}
+
+                  {/* Fallback jika gambar gagal load */}
+                  <div className="img-fallback hidden w-full h-44 flex-col items-center justify-center bg-slate-100 text-slate-400 gap-1">
+                    <span className="text-3xl">📷</span>
+                    <span className="text-[10px] font-semibold">Gambar tidak dapat dimuat</span>
+                    <a href={media.driveUrl} target="_blank" rel="noreferrer" className="text-[9px] text-teal-600 underline mt-1">Buka di Drive</a>
+                  </div>
+
+                  {/* Card footer */}
+                  <div className="p-2.5 bg-white border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      {/* Badge tipe */}
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${
+                        media.type === 'video'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-teal-50 text-teal-700 border-teal-200'
+                      }`}>
+                        {media.type === 'video' ? '🎥 Video' : '📷 Foto'} #{index + 1}
+                      </span>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1">
+                        <a
+                          href={media.driveUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Buka di Drive"
+                          className="text-[10px] text-slate-500 hover:text-teal-700 p-1 rounded transition font-bold"
+                        >
+                          🔗
+                        </a>
+                        <a
+                          href={media.downloadUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Download"
+                          className="text-[10px] text-slate-500 hover:text-blue-700 p-1 rounded transition font-bold"
+                        >
+                          ⬇
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -3625,18 +3841,56 @@ function DokumentasiGalleryView() {
           ) : (
             <div className="py-12 text-center text-slate-400 font-medium italic space-y-2">
               <Camera className="h-8 w-8 mx-auto text-slate-300 animate-bounce" />
-              <p>Belum ada dokumentasi foto yang diunggah untuk program kerja ini.</p>
-              <p className="text-[9px] text-slate-400">Silakan edit program kerja di menu "Siklus 4" untuk menambahkan foto.</p>
+              <p>Belum ada dokumentasi foto/video untuk program kerja ini.</p>
+              <p className="text-[9px] text-slate-400">Silakan edit program kerja di menu "Siklus 4" untuk menambahkan foto/video.</p>
             </div>
           )}
         </div>
-      ) : null}
+      ) : programs.length > 0 ? null : (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center text-slate-400 space-y-2 shadow-sm">
+          <Camera className="h-8 w-8 mx-auto text-slate-300" />
+          <p className="font-semibold text-sm">Belum ada program kerja</p>
+          <p className="text-[10px]">Tambahkan program kerja di menu Siklus 4 terlebih dahulu.</p>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl('')}
+        >
+          <button
+            onClick={() => setLightboxUrl('')}
+            className="absolute top-4 right-4 text-white bg-white/20 hover:bg-white/40 rounded-full p-2 text-lg font-bold transition cursor-pointer z-10"
+          >
+            ✕
+          </button>
+          <div className="max-w-5xl max-h-[90vh] w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            {lightboxType === 'video' ? (
+              <iframe
+                src={lightboxUrl}
+                className="w-full aspect-video rounded-xl"
+                allow="autoplay"
+                allowFullScreen
+              />
+            ) : (
+              <img
+                src={lightboxUrl}
+                alt="Preview full size"
+                className="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // -------------------------------------------------------------
 // CONSTANTS & STATIC MOCK DATA
+
 // -------------------------------------------------------------
 const COLUMNS = ['Aspirasi', 'Masalah', 'Potensi', 'Lainnya'];
 

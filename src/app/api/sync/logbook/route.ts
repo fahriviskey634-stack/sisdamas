@@ -72,14 +72,15 @@ async function getOrCreateFolder(name: string, parentId: string, token: string):
 }
 
 async function uploadFileToDrive(base64Data: string, filename: string, mimeType: string, parentFolderId: string, token: string): Promise<string> {
-  const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+  // Strip semua data URI prefix: data:image/jpeg;base64, atau data:video/mp4;base64,
+  const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
   const metadata = {
     name: filename,
     mimeType,
     parents: [parentFolderId]
   };
 
-  const boundary = 'foo_bar_upload_boundary';
+  const boundary = 'kkn56_logbook_upload_boundary';
   const header = `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
   const footer = `\r\n--${boundary}--`;
 
@@ -100,30 +101,26 @@ async function uploadFileToDrive(base64Data: string, filename: string, mimeType:
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Google Drive upload failed: ${errText}`);
+    throw new Error(`Google Drive upload gagal: ${errText}`);
   }
 
   const file = await res.json();
 
-  // Set permission to anyone with link viewable
+  // Set permission: siapapun dengan link bisa lihat
   try {
     await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        role: 'reader',
-        type: 'anyone'
-      })
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
   } catch (e) {
-    console.error("Failed to set file permission:", e);
+    console.error('[Logbook] Gagal set permission Drive:', e);
   }
 
-  return `https://docs.google.com/uc?export=download&id=${file.id}`;
+  // Kembalikan thumbnail URL (untuk display <img>) bukan download URL
+  return `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
 }
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -181,23 +178,26 @@ export async function POST(req: NextRequest) {
         for (let j = 0; j < photos.length; j++) {
           const photoUrl = photos[j];
           if (photoUrl.startsWith('data:image')) {
-            // Upload uncompressed to Google Drive
+            // Upload ke Google Drive — TIDAK simpan base64 ke storage
             if (token && parentFolderId) {
               try {
                 const mimeType = photoUrl.split(';')[0].split(':')[1] || 'image/jpeg';
                 const extension = mimeType.split('/')[1] || 'jpg';
                 const filename = `logbook_${nim}_${dateStr}_act${i}_photo${j}_${Date.now()}.${extension}`;
-                const directLink = await uploadFileToDrive(photoUrl, filename, mimeType, parentFolderId, token);
-                uploadedUrls.push(directLink);
+                // Kembalikan Drive thumbnail viewUrl
+                const viewUrl = await uploadFileToDrive(photoUrl, filename, mimeType, parentFolderId, token);
+                uploadedUrls.push(viewUrl);
               } catch (uploadErr) {
-                console.error("Error uploading to Google Drive, using base64 fallback:", uploadErr);
-                uploadedUrls.push(photoUrl);
+                console.error('[Logbook] Upload ke Drive gagal, foto dilewati:', uploadErr);
+                // TIDAK simpan base64 — lempar error agar user tahu
+                throw new Error(`Gagal upload foto ke Google Drive. Pastikan Service Account sudah dikonfigurasi dan folder Drive sudah di-share.`);
               }
             } else {
-              // Mock fallback
-              uploadedUrls.push(`https://drive.google.com/open?id=mock-photo-logbook-${Date.now()}-${j}`);
+              // Drive belum dikonfigurasi — tolak, jangan simpan base64
+              throw new Error('Google Drive belum dikonfigurasi. Foto tidak dapat diupload. Silakan hubungi administrator.');
             }
           } else {
+            // Sudah berupa Drive URL (foto lama) — pertahankan
             uploadedUrls.push(photoUrl);
           }
         }

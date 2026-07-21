@@ -163,6 +163,20 @@ CREATE TABLE IF NOT EXISTS program (
     status VARCHAR(50) NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
+    photo_urls JSONB DEFAULT '[]'::jsonb, -- Array of {viewUrl, downloadUrl, type} objects from Google Drive
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Tabel program_photo: penyimpanan terstruktur foto/video per program kerja (dari Google Drive)
+CREATE TABLE IF NOT EXISTS program_photo (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    program_id UUID NOT NULL REFERENCES program(id) ON DELETE CASCADE,
+    drive_file_id VARCHAR(255) NOT NULL,           -- Google Drive file ID
+    view_url TEXT NOT NULL,                         -- Drive thumbnail URL untuk display di web
+    download_url TEXT NOT NULL,                     -- Drive download URL
+    media_type VARCHAR(10) NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
+    original_filename VARCHAR(255),
+    uploaded_by UUID REFERENCES user_profile(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
@@ -219,4 +233,6 @@ CREATE INDEX IF NOT EXISTS idx_potential_survey_id ON potential(survey_id);
 CREATE INDEX IF NOT EXISTS idx_sticky_note_column_id ON sticky_note(column_id);
 CREATE INDEX IF NOT EXISTS idx_priority_item_matrix_id ON priority_item(matrix_id);
 CREATE INDEX IF NOT EXISTS idx_program_task_program_id ON program_task(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_photo_program_id ON program_photo(program_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
+
