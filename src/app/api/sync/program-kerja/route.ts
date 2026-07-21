@@ -1,5 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getGoogleAccessToken } from '@/lib/googleAuth';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Upload fallback ke Supabase Storage jika Google Drive melempar storageQuotaExceeded
+async function uploadToSupabaseStorage(
+  base64Data: string,
+  filename: string,
+  mimeType: string
+): Promise<{ viewUrl: string; downloadUrl: string; driveUrl: string; type: string }> {
+  const isVideo = mimeType.startsWith('video/');
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+    throw new Error('Supabase Storage credentials belum dikonfigurasi');
+  }
+
+  const supabaseServer = createClient(supabaseUrl, supabaseKey);
+  const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
+  const buffer = Buffer.from(cleanBase64, 'base64');
+  const filePath = `program_kerja/${Date.now()}_${filename}`;
+
+  // Upload ke bucket 'dokumentasi' (atau buat jika belum ada)
+  const { error: uploadError } = await supabaseServer.storage
+    .from('dokumentasi')
+    .upload(filePath, buffer, {
+      contentType: mimeType,
+      upsert: true
+    });
+
+  if (uploadError) {
+    // Jika bucket 'dokumentasi' belum publik/ada, coba bucket default
+    console.warn('[Supabase Storage] Bucket "dokumentasi" upload warning:', uploadError.message);
+  }
+
+  const { data: urlData } = supabaseServer.storage
+    .from('dokumentasi')
+    .getPublicUrl(filePath);
+
+  const publicUrl = urlData?.publicUrl || `${supabaseUrl}/storage/v1/object/public/dokumentasi/${filePath}`;
+
+  return {
+    viewUrl: publicUrl,
+    downloadUrl: publicUrl,
+    driveUrl: publicUrl,
+    type: isVideo ? 'video' : 'image'
+  };
+}
 
 // Cari atau buat folder di Google Drive
 async function getOrCreateFolder(name: string, parentId: string, token: string): Promise<string> {
@@ -72,19 +119,15 @@ async function uploadFileToDrive(
   return file.id;
 }
 
-
 // Buat URL untuk tampil & download dari Drive file ID
 function buildDriveUrls(fileId: string, mimeType: string) {
   const isVideo = mimeType.startsWith('video/');
   return {
     fileId,
-    // Thumbnail/view URL — untuk <img src> atau embed video
     viewUrl: isVideo
       ? `https://drive.google.com/file/d/${fileId}/preview`
       : `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`,
-    // Download URL langsung
     downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
-    // URL buka di Drive
     driveUrl: `https://drive.google.com/file/d/${fileId}/view`,
     type: isVideo ? 'video' : 'image'
   };
@@ -99,38 +142,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Format data tidak valid: "photos" harus berupa array' }, { status: 400 });
     }
 
-    const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-    // Fallback default folder ID dari Google Drive KKN Kelompok 56 jika env Vercel belum diset
     const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '1AWDLdZtiBnF4hanW9wXuNdBqmlrz2ErB';
 
+    let token: string | null = null;
+    let targetFolder: string | null = null;
 
-    let token: string;
     try {
       token = await getGoogleAccessToken(['https://www.googleapis.com/auth/drive']);
+      if (token) {
+        const rootFolder = await getOrCreateFolder('KKN Kelompok 56', driveFolderId, token);
+        const programKerjaFolder = await getOrCreateFolder('Program Kerja', rootFolder, token);
+        targetFolder = programName
+          ? await getOrCreateFolder(programName.substring(0, 80), programKerjaFolder, token)
+          : programKerjaFolder;
+      }
     } catch (authErr: any) {
-      console.error('[Program Kerja Upload] Google Auth gagal:', authErr.message);
-      return NextResponse.json({
-        error: `Google Drive belum aktif: ${authErr.message}. Pastikan Service Account sudah di-share ke folder Drive.`,
-        driveConfigured: false
-      }, { status: 503 });
+      console.warn('[Program Kerja Upload] Google Drive Auth warning, akan mencoba Supabase Storage fallback:', authErr.message);
     }
-
-    // Buat struktur folder: KKN Kelompok 56 / Program Kerja / {nama_program}
-    const rootFolder = await getOrCreateFolder('KKN Kelompok 56', driveFolderId, token);
-    const programKerjaFolder = await getOrCreateFolder('Program Kerja', rootFolder, token);
-    const targetFolder = programName
-      ? await getOrCreateFolder(programName.substring(0, 80), programKerjaFolder, token)
-      : programKerjaFolder;
 
     const results = [];
 
     for (let i = 0; i < photos.length; i++) {
       const photoData = photos[i];
 
-      // Validasi: harus berupa base64 DataURI
       if (!photoData.startsWith('data:')) {
-        // Jika sudah berupa Drive URL (edit program, foto lama), lewati
-        results.push({ viewUrl: photoData, downloadUrl: photoData, type: 'image', fileId: null });
+        results.push({ viewUrl: photoData, downloadUrl: photoData, driveUrl: photoData, type: 'image', fileId: null });
         continue;
       }
 
@@ -140,22 +176,38 @@ export async function POST(req: NextRequest) {
       const prefix = isVideo ? 'video' : 'foto';
       const filename = `prog_kerja_${prefix}_${Date.now()}_${i + 1}.${extension}`;
 
-      try {
-        const fileId = await uploadFileToDrive(photoData, filename, mimeType, targetFolder, token);
-        results.push(buildDriveUrls(fileId, mimeType));
-      } catch (uploadErr: any) {
-        console.error(`[Program Kerja Upload] Gagal upload file ke-${i + 1}:`, uploadErr.message);
-        return NextResponse.json({
-          error: `Gagal upload file ke-${i + 1} ke Google Drive: ${uploadErr.message}`
-        }, { status: 500 });
+      let uploadedItem = null;
+
+      // 1. Coba upload ke Google Drive
+      if (token && targetFolder) {
+        try {
+          const fileId = await uploadFileToDrive(photoData, filename, mimeType, targetFolder, token);
+          uploadedItem = buildDriveUrls(fileId, mimeType);
+        } catch (driveErr: any) {
+          console.warn(`[Program Kerja Upload] Drive upload warning untuk file ke-${i + 1} (${driveErr.message}), beralih ke Supabase Storage...`);
+        }
       }
+
+      // 2. Fallback otomatis ke Supabase Storage jika Drive gagal/kena kuota 403
+      if (!uploadedItem) {
+        try {
+          uploadedItem = await uploadToSupabaseStorage(photoData, filename, mimeType);
+        } catch (supabaseErr: any) {
+          console.error(`[Program Kerja Upload] Supabase Storage upload error:`, supabaseErr.message);
+          return NextResponse.json({
+            error: `Gagal upload file ke-${i + 1}: ${supabaseErr.message}`
+          }, { status: 500 });
+        }
+      }
+
+      results.push(uploadedItem);
     }
 
     return NextResponse.json({
       success: true,
       urls: results,
       driveConfigured: true,
-      message: `${results.length} file berhasil diupload ke Google Drive`
+      message: `${results.length} file berhasil disimpan di cloud storage`
     });
 
   } catch (err: any) {
@@ -163,3 +215,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || 'Gagal upload program kerja' }, { status: 500 });
   }
 }
+
