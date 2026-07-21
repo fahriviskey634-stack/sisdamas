@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     });
 
     const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-    const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '1AWDLdZtiBnF4hanW9wXuNdBqmlrz2ErB';
     
     let token = '';
     let parentFolderId = '';

@@ -99,15 +99,9 @@ export async function POST(req: NextRequest) {
     }
 
     const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-    const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    // Fallback default folder ID dari Google Drive KKN Kelompok 56 jika env Vercel belum diset
+    const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '1AWDLdZtiBnF4hanW9wXuNdBqmlrz2ErB';
 
-    // Validasi Google Drive credentials
-    if (!driveFolderId) {
-      return NextResponse.json({
-        error: 'GOOGLE_DRIVE_FOLDER_ID belum dikonfigurasi di .env.local',
-        driveConfigured: false
-      }, { status: 503 });
-    }
 
     let token: string;
     try {

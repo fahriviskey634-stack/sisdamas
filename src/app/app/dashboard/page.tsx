@@ -1277,26 +1277,60 @@ function Siklus4View() {
   const [uploadError, setUploadError] = useState<string>('');
   const [editingProg, setEditingProg] = useState<any | null>(null);
 
-  // Load programs & priority problems from localStorage
+  // Load programs & priority problems from Supabase
   useEffect(() => {
-    // Priority Problems
-    const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
-    if (savedProblems) {
-      const parsed = JSON.parse(savedProblems);
-      setPriorityProblems(parsed);
-      if (parsed.length > 0) {
-        setNewPriority(parsed[0].problem_text);
-      }
-    } else {
-      setPriorityProblems([]);
-    }
-
-    // Programs
-    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-    if (savedProgs) {
-      setPrograms(JSON.parse(savedProgs));
-    }
+    fetchPriorityProblems();
+    fetchPrograms();
   }, []);
+
+  const fetchPriorityProblems = async () => {
+    try {
+      const { data } = await supabase.from('priority_item').select('*');
+      if (data && data.length > 0) {
+        setPriorityProblems(data);
+        setNewPriority(data[0].problem_text);
+      } else {
+        const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
+        if (savedProblems) {
+          const parsed = JSON.parse(savedProblems);
+          setPriorityProblems(parsed);
+          if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
+        }
+      }
+    } catch {
+      const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
+      if (savedProblems) {
+        const parsed = JSON.parse(savedProblems);
+        setPriorityProblems(parsed);
+        if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
+      }
+    }
+  };
+
+  const fetchPrograms = async () => {
+    try {
+      const { data } = await supabase.from('program').select('*').order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        setPrograms(data);
+      } else {
+        const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+        if (savedProgs) setPrograms(JSON.parse(savedProgs));
+      }
+    } catch {
+      const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+      if (savedProgs) setPrograms(JSON.parse(savedProgs));
+    }
+  };
+
+  const syncProgramsToSupabase = async (updatedProgs: any[]) => {
+    localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedProgs));
+    try {
+      await supabase.from('program').upsert(updatedProgs);
+    } catch (err) {
+      console.error('Gagal sinkronisasi program ke Supabase:', err);
+    }
+  };
+
 
   const handleStartEdit = (prog: any) => {
     setEditingProg(prog);
@@ -1401,7 +1435,7 @@ function Siklus4View() {
       };
       const updated = programs.map((p: any) => p.id === editingProg.id ? updatedProg : p);
       setPrograms(updated);
-      localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
+      syncProgramsToSupabase(updated);
       setEditingProg(null);
     } else {
       const newProg = {
@@ -1422,7 +1456,7 @@ function Siklus4View() {
       };
       const updated = [newProg, ...programs];
       setPrograms(updated);
-      localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
+      syncProgramsToSupabase(updated);
     }
 
     // Bersihkan form
@@ -1443,11 +1477,15 @@ function Siklus4View() {
     setShowAddForm(false);
   };
 
-  const deleteProgram = (id: string) => {
+  const deleteProgram = async (id: string) => {
     const updated = programs.filter(p => p.id !== id);
     setPrograms(updated);
-    localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updated));
+    syncProgramsToSupabase(updated);
+    try {
+      await supabase.from('program').delete().eq('id', id);
+    } catch {}
   };
+
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -1881,6 +1919,10 @@ function StickyNotesView() {
   const [rtNumber, setRtNumber] = useState('RT 01 / RW 01');
   const [authorName, setAuthorName] = useState('Anonim');
 
+  useEffect(() => {
+    fetchNotes();
+  }, []);
+
   const fetchNotes = async () => {
     try {
       const { data } = await supabase
@@ -1898,8 +1940,14 @@ function StickyNotesView() {
           author: d.author || 'Anonim',
           created_at: d.created_at
         })));
+      } else {
+        const local = localStorage.getItem('sukahaji_sticky_notes');
+        if (local) setNotes(JSON.parse(local));
       }
-    } catch {}
+    } catch {
+      const local = localStorage.getItem('sukahaji_sticky_notes');
+      if (local) setNotes(JSON.parse(local));
+    }
   };
 
   const handleAddNote = async (e: React.FormEvent) => {
@@ -1907,7 +1955,6 @@ function StickyNotesView() {
     if (!newContent.trim()) return;
 
     const newNote = {
-      id: Math.random().toString(36).substr(2, 9),
       column_name: selectedColumn,
       content: newContent.trim(),
       color: selectedColor,
@@ -1916,9 +1963,34 @@ function StickyNotesView() {
       created_at: new Date().toISOString()
     };
 
-    setNotes((prev) => [...prev, newNote]);
+    try {
+      const { data, error } = await supabase
+        .from('sticky_note')
+        .insert([newNote])
+        .select();
+
+      if (data && data.length > 0) {
+        setNotes((prev) => [...prev, data[0]]);
+      } else {
+        const itemWithId = { ...newNote, id: Math.random().toString(36).substr(2, 9) };
+        setNotes((prev) => {
+          const next = [...prev, itemWithId];
+          localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(next));
+          return next;
+        });
+      }
+    } catch {
+      const itemWithId = { ...newNote, id: Math.random().toString(36).substr(2, 9) };
+      setNotes((prev) => {
+        const next = [...prev, itemWithId];
+        localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(next));
+        return next;
+      });
+    }
+
     setNewContent('');
   };
+
 
   return (
     <div className="space-y-6">
@@ -3057,15 +3129,39 @@ function PriorityView() {
   const [newProbCat, setNewProbCat] = useState('Infrastruktur');
   const [newProbRt, setNewProbRt] = useState('RT 01 / RW 01');
 
-  // Load items from localStorage on mount
+  // Load items from Supabase on mount with localStorage fallback
   useEffect(() => {
-    const saved = localStorage.getItem('sukahaji_priority_items_v3');
-    if (saved) {
-      setItems(JSON.parse(saved));
-    } else {
-      setItems([]);
-    }
+    fetchPriorityItems();
   }, []);
+
+  const fetchPriorityItems = async () => {
+    try {
+      const { data } = await supabase
+        .from('priority_item')
+        .select('*')
+        .order('rank', { ascending: true });
+
+      if (data && data.length > 0) {
+        setItems(data);
+      } else {
+        const saved = localStorage.getItem('sukahaji_priority_items_v3');
+        if (saved) setItems(JSON.parse(saved));
+      }
+    } catch {
+      const saved = localStorage.getItem('sukahaji_priority_items_v3');
+      if (saved) setItems(JSON.parse(saved));
+    }
+  };
+
+  const syncItemsToSupabase = async (updatedItems: PriorityItem[]) => {
+    localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(updatedItems));
+    try {
+      await supabase.from('priority_item').upsert(updatedItems);
+    } catch (e) {
+      console.error('Failed to sync priority_item to Supabase:', e);
+    }
+  };
+
 
   const handleScoreUSG = (id: string, field: 'urgency' | 'seriousness' | 'growth', val: number) => {
     setItems((prev) => {
@@ -3090,7 +3186,7 @@ function PriorityView() {
         ...item,
         rank: sorted.findIndex((s) => s.id === item.id) + 1
       }));
-      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(reranked));
+      syncItemsToSupabase(reranked);
       return reranked;
     });
   };
@@ -3120,7 +3216,7 @@ function PriorityView() {
         ...item,
         rank_abcd: sorted.findIndex((s) => s.id === item.id) + 1
       }));
-      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(reranked));
+      syncItemsToSupabase(reranked);
       return reranked;
     });
   };
@@ -3133,7 +3229,7 @@ function PriorityView() {
         }
         return item;
       });
-      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(updated));
+      syncItemsToSupabase(updated);
       return updated;
     });
   };
@@ -3676,13 +3772,33 @@ function DokumentasiGalleryView() {
   const [lightboxType, setLightboxType] = useState<string>('image');
 
   useEffect(() => {
-    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-    if (savedProgs) {
-      const parsed = JSON.parse(savedProgs);
-      setPrograms(parsed);
-      if (parsed.length > 0) setSelectedProgId(parsed[0].id);
-    }
+    fetchPrograms();
   }, []);
+
+  const fetchPrograms = async () => {
+    try {
+      const { data } = await supabase.from('program').select('*').order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        setPrograms(data);
+        setSelectedProgId(data[0].id);
+      } else {
+        const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+        if (savedProgs) {
+          const parsed = JSON.parse(savedProgs);
+          setPrograms(parsed);
+          if (parsed.length > 0) setSelectedProgId(parsed[0].id);
+        }
+      }
+    } catch {
+      const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+      if (savedProgs) {
+        const parsed = JSON.parse(savedProgs);
+        setPrograms(parsed);
+        if (parsed.length > 0) setSelectedProgId(parsed[0].id);
+      }
+    }
+  };
+
 
   const activeProg = programs.find((p: any) => p.id === selectedProgId);
 
