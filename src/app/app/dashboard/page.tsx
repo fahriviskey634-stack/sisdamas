@@ -105,15 +105,10 @@ function DashboardSPA() {
     if (session) {
       setCurrentUser(session);
     } else {
-      setCurrentUser({
-        isMember: false,
-        email: 'surveyor@sukahaji-official.id',
-        name: 'Admin/DPL',
-        nim: 'ADMIN56',
-        prodi: 'Sistem Informasi',
-        fakultas: 'Sains dan Teknologi',
-        division: 'Fasilitator Utama'
-      });
+      // Jika cookie sesi tidak ada (belum login), paksa redirect ke halaman /login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
   }, []);
 
@@ -150,12 +145,21 @@ function DashboardSPA() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      document.cookie = 'sb-access-token=; path=/; max-age=0';
-      router.push('/login');
-    } catch {
-      router.push('/login');
+    } catch {}
+
+    // Hapus semua cookies
+    document.cookie = 'kkn-member-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0';
+    document.cookie = 'sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0';
+    document.cookie = 'sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0';
+
+    // Bersihkan seluruh cache browser local storage & session storage
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/login';
     }
   };
+
 
   // Sync drafts to serverless API
   const handleSyncDrafts = async () => {
@@ -2533,25 +2537,75 @@ function LogbookView({ currentUser }: { currentUser: any }) {
     }
   }, [currentUser]);
 
-  // Load activities for activeNim and selectedDate
+  // Load activities for activeNim and selectedDate from cloud/API with local fallback
   useEffect(() => {
     if (!activeNim) return;
-    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
-    const dayLogs = allLogs[selectedDate] || [];
-    setActivities(dayLogs);
+
+    const fetchCloudLogs = async () => {
+      try {
+        const { data: entryData } = await supabase
+          .from('logbook_entry')
+          .select('id')
+          .eq('nim', activeNim)
+          .eq('entry_date', selectedDate)
+          .single();
+
+        if (entryData) {
+          const { data: actData } = await supabase
+            .from('logbook_activity')
+            .select('*')
+            .eq('entry_id', entryData.id)
+            .order('created_at', { ascending: true });
+
+          if (actData && actData.length > 0) {
+            setActivities(actData);
+            return;
+          }
+        }
+      } catch {}
+
+      // Fallback ke localStorage
+      const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+      setActivities(allLogs[selectedDate] || []);
+    };
+
+    fetchCloudLogs();
   }, [activeNim, selectedDate]);
 
   // Load Rekap (History)
   useEffect(() => {
     if (!activeNim) return;
-    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
-    const tempRekap = Object.keys(allLogs).map(date => ({
-      date,
-      count: allLogs[date].length,
-      status: allLogs[date].length > 0 ? 'Tersimpan' : 'Draft'
-    })).sort((a, b) => b.date.localeCompare(a.date));
-    setRekap(tempRekap);
+
+    const fetchRekap = async () => {
+      try {
+        const { data: entries } = await supabase
+          .from('logbook_entry')
+          .select('id, entry_date, logbook_activity(count)')
+          .eq('nim', activeNim)
+          .order('entry_date', { ascending: false });
+
+        if (entries && entries.length > 0) {
+          setRekap(entries.map((e: any) => ({
+            date: e.entry_date,
+            count: e.logbook_activity?.[0]?.count || 1,
+            status: 'Tersimpan (Cloud)'
+          })));
+          return;
+        }
+      } catch {}
+
+      const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+      const tempRekap = Object.keys(allLogs).map(date => ({
+        date,
+        count: allLogs[date].length,
+        status: allLogs[date].length > 0 ? 'Tersimpan' : 'Draft'
+      })).sort((a, b) => b.date.localeCompare(a.date));
+      setRekap(tempRekap);
+    };
+
+    fetchRekap();
   }, [activeNim, activities]);
+
 
   const handleAddRow = () => {
     if (!kegiatanText.trim() || !outputText.trim()) return;
