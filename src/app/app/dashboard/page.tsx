@@ -1435,6 +1435,51 @@ function Siklus4View() {
     setShowAddForm(false);
   };
 
+  const compressImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      if (file.type.startsWith('video/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+        return;
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const maxWidth = 1200;
+          const maxHeight = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.onerror = () => {
+          const fallbackReader = new FileReader();
+          fallbackReader.onloadend = () => resolve(fallbackReader.result as string);
+          fallbackReader.readAsDataURL(file);
+        };
+      };
+    });
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!newName) return;
@@ -1454,10 +1499,23 @@ function Siklus4View() {
             programName: newName
           })
         });
-        const data = await res.json();
+
+        const textRes = await res.text();
+        let data: any = {};
+        try {
+          data = JSON.parse(textRes);
+        } catch {
+          if (res.status === 413 || textRes.includes('Request Entity Too Large')) {
+            setUploadError('Ukuran file media terlalu besar untuk dikirim sekaligus. Mohon kurangi jumlah/ukuran foto atau video.');
+          } else {
+            setUploadError(`Error server (${res.status}): ${textRes.substring(0, 100)}`);
+          }
+          setUploadingPhotos(false);
+          return;
+        }
+
         if (!res.ok) {
-          // Drive belum aktif atau error
-          setUploadError(data.error || 'Gagal upload ke Google Drive.');
+          setUploadError(data.error || 'Gagal upload foto/video.');
           setUploadingPhotos(false);
           return;
         }
@@ -1468,6 +1526,7 @@ function Siklus4View() {
         return;
       }
     }
+
 
     // Ekstrak viewUrl saja untuk disimpan ke photo_urls (hanya string URL, bukan base64)
     const newViewUrls = driveUrls.map((u: any) => ({
@@ -1755,23 +1814,17 @@ function Siklus4View() {
                   if (files && files.length > 0) {
                     const fileList = Array.from(files);
                     setNewMediaFiles(fileList);
-                    // Buat blob URL untuk preview lokal (tidak simpan base64)
                     const blobPreviews = fileList.map(f => URL.createObjectURL(f));
                     setPhotoPreviews(blobPreviews);
-                    // Baca sebagai base64 untuk upload ke Drive API
-                    const readPromises = fileList.map(file =>
-                      new Promise<string>(resolve => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result as string);
-                        reader.readAsDataURL(file);
-                      })
-                    );
+                    // Kompresi foto secara otomatis client-side
+                    const readPromises = fileList.map(file => compressImageFile(file));
                     Promise.all(readPromises).then(results => {
                       setNewPhotos(results);
                       setUploadError('');
                     });
                   }
                 }}
+
                 className="text-xxs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xxs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
               />
               {photoPreviews.length > 0 && (
