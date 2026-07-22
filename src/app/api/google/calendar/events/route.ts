@@ -57,7 +57,7 @@ function parseICSFile(): any[] {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, description, start_date, end_date } = body;
+    const { title, description, start_date, end_date, group } = body;
 
     if (!title || !start_date || !end_date) {
       return NextResponse.json(
@@ -65,6 +65,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const groupTag = group && group !== 'semua' && !title.includes('[Kelompok') ? `[Kelompok ${group}] ` : '';
+    const formattedTitle = `${groupTag}${title}`;
 
     let gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
     
@@ -78,11 +81,11 @@ export async function POST(req: NextRequest) {
 
     // Check for developer fallback / offline mode
     if (!gcpKey || gcpKey.includes('placeholder') || calendarId.includes('placeholder')) {
-      console.log(`[Google Calendar Mock] Creating event: "${title}" (${start_date} s/d ${end_date})`);
+      console.log(`[Google Calendar Mock] Creating event: "${formattedTitle}" (${start_date} s/d ${end_date})`);
       return NextResponse.json({
         success: true,
         mocked: true,
-        message: "Milestone berhasil ditambahkan ke Google Calendar (Mode Simulasi)",
+        message: `Milestone ${groupTag}berhasil ditambahkan ke Google Calendar (Mode Simulasi)`,
         data: {
           calendar_event_id: `mock-event-id-${Date.now()}`,
           html_link: 'https://calendar.google.com/calendar/r/eventedit',
@@ -95,8 +98,8 @@ export async function POST(req: NextRequest) {
     const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/calendar.events']);
 
     const eventPayload = {
-      summary: title,
-      description: description || 'Dibuat otomatis oleh Sistem Informasi KKN Sisdamas Sukahaji Kelompok 56',
+      summary: formattedTitle,
+      description: description || `Dibuat otomatis oleh Sistem Informasi KKN Sisdamas Sukahaji ${groupTag || 'Semua Kelompok'}`,
       start: {
         date: start_date,
         timeZone: 'Asia/Jakarta'

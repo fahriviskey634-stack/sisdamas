@@ -15,6 +15,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
   const [calendarTitle, setCalendarTitle] = useState('');
   const [calendarStart, setCalendarStart] = useState('');
   const [calendarEnd, setCalendarEnd] = useState('');
+  const [calendarTargetGroup, setCalendarTargetGroup] = useState<string>('56');
   const [syncingCalendar, setSyncingCalendar] = useState(false);
   const [calendarSyncResult, setCalendarSyncResult] = useState<any>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -22,6 +23,43 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date(2026, 6, 1)); // start on July 2026 (KKN timeline start)
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null);
+
+  // Group Color Coding Config for Google Calendar Events
+  const GROUP_EVENT_STYLES: Record<string, { badge: string; dot: string; label: string; pillBg: string }> = {
+    '55': {
+      badge: 'bg-blue-950/90 border-blue-500/60 text-blue-100',
+      dot: 'bg-blue-400',
+      label: 'Kelompok 55 (Dusun 1)',
+      pillBg: 'bg-blue-600/40 text-blue-200 border-blue-400/50'
+    },
+    '56': {
+      badge: 'bg-teal-950/90 border-teal-500/60 text-teal-100',
+      dot: 'bg-emerald-400',
+      label: 'Kelompok 56 (Dusun 2)',
+      pillBg: 'bg-emerald-600/40 text-emerald-200 border-emerald-400/50'
+    },
+    '57': {
+      badge: 'bg-rose-950/90 border-rose-500/60 text-rose-100',
+      dot: 'bg-rose-400',
+      label: 'Kelompok 57 (Dusun 3)',
+      pillBg: 'bg-rose-600/40 text-rose-200 border-rose-400/50'
+    },
+    'semua': {
+      badge: 'bg-purple-950/90 border-purple-500/60 text-purple-100',
+      dot: 'bg-amber-400',
+      label: 'Semua Kelompok',
+      pillBg: 'bg-amber-600/40 text-amber-200 border-amber-400/50'
+    }
+  };
+
+  const getEventGroup = (evt: any): string => {
+    if (evt.group) return evt.group;
+    const summary = (evt.summary || '').toLowerCase();
+    if (summary.includes('55') || summary.includes('dusun 1')) return '55';
+    if (summary.includes('56') || summary.includes('dusun 2')) return '56';
+    if (summary.includes('57') || summary.includes('dusun 3')) return '57';
+    return 'semua';
+  };
 
   // Fetch Google Calendar ID and Events list dynamically
   useEffect(() => {
@@ -159,7 +197,8 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
         body: JSON.stringify({
           title: calendarTitle,
           start: calendarStart,
-          end: calendarEnd
+          end: calendarEnd,
+          group: calendarTargetGroup
         })
       });
       const data = await res.json();
@@ -552,6 +591,14 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                 </span>
               </div>
 
+              {/* Group Color Legend Bar */}
+              <div className="flex flex-wrap items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-xl p-1.5 text-[9px] font-bold text-teal-100">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> K55 (Dusun 1)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> K56 (Dusun 2)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400"></span> K57 (Dusun 3)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Semua</span>
+              </div>
+
               {/* Month Navigator Header */}
               <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white">
                 <button onClick={handlePrevMonth} className="hover:text-teal-300 p-1 cursor-pointer">‹</button>
@@ -561,7 +608,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                 <button onClick={handleNextMonth} className="hover:text-teal-300 p-1 cursor-pointer">›</button>
               </div>
 
-              {/* 7-Day Grid */}
+              {/* 7-Day Grid Header */}
               <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-teal-200/70 pt-1">
                 <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
               </div>
@@ -572,25 +619,34 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                   if (!day) return <div key={`empty-${idx}`} className="h-7 rounded-lg bg-transparent" />;
                   
                   const evts = getEventsForDay(day);
-                  const hasEvents = evts.length > 0;
                   const isToday = new Date().toDateString() === day.toDateString();
                   const isSelected = selectedCalendarDay?.toDateString() === day.toDateString();
+
+                  // Get unique group codes for this day
+                  const uniqueGroups = Array.from(new Set(evts.map(getEventGroup)));
 
                   return (
                     <button
                       key={day.toISOString()}
                       onClick={() => setSelectedCalendarDay(day)}
-                      className={`h-7 rounded-lg text-[10px] font-bold relative flex items-center justify-center transition cursor-pointer border ${
+                      className={`h-8 rounded-lg text-[10px] font-bold relative flex items-center justify-center transition cursor-pointer border pb-1.5 ${
                         isSelected 
-                          ? 'bg-teal-400 text-[#092430] border-teal-300 shadow-md' 
+                          ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md font-black' 
                           : isToday 
                           ? 'bg-white/20 text-white border-white/40' 
                           : 'bg-white/5 text-teal-100 hover:bg-white/10 border-white/5'
                       }`}
                     >
                       <span>{day.getDate()}</span>
-                      {hasEvents && (
-                        <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#092430]' : 'bg-emerald-400 animate-pulse'}`} />
+                      {uniqueGroups.length > 0 && (
+                        <div className="absolute bottom-1 flex items-center justify-center gap-0.5">
+                          {uniqueGroups.map(g => (
+                            <span
+                              key={g}
+                              className={`w-1.5 h-1.5 rounded-full ${GROUP_EVENT_STYLES[g]?.dot || 'bg-amber-400'}`}
+                            />
+                          ))}
+                        </div>
                       )}
                     </button>
                   );
@@ -599,35 +655,62 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
 
               {/* Selected Day Events List */}
               {selectedCalendarDay && (
-                <div className="bg-white/10 border border-white/15 rounded-xl p-2.5 text-[10px] space-y-1.5 mt-2 animate-fade-in">
-                  <div className="flex items-center justify-between font-bold text-teal-200 border-b border-white/10 pb-1">
-                    <span>Agenda: {selectedCalendarDay.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                    <button onClick={() => setSelectedCalendarDay(null)} className="text-slate-400 hover:text-white">✕</button>
+                <div className="bg-slate-900/90 border border-white/15 rounded-xl p-3 text-[10px] space-y-2 mt-2 animate-fade-in shadow-lg">
+                  <div className="flex items-center justify-between font-bold text-amber-300 border-b border-white/10 pb-1.5">
+                    <span>📅 Agenda: {selectedCalendarDay.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    <button onClick={() => setSelectedCalendarDay(null)} className="text-slate-400 hover:text-white font-bold px-1.5">✕</button>
                   </div>
                   {getEventsForDay(selectedCalendarDay).length > 0 ? (
-                    getEventsForDay(selectedCalendarDay).map((evt, idx) => (
-                      <div key={idx} className="bg-white/5 rounded-lg p-1.5 border border-white/5">
-                        <p className="font-bold text-white text-[10px]">{evt.summary}</p>
-                        {evt.description && <p className="text-[9px] text-teal-200/80 mt-0.5">{evt.description}</p>}
-                      </div>
-                    ))
+                    getEventsForDay(selectedCalendarDay).map((evt, idx) => {
+                      const g = getEventGroup(evt);
+                      const style = GROUP_EVENT_STYLES[g] || GROUP_EVENT_STYLES['semua'];
+                      return (
+                        <div key={idx} className={`rounded-xl p-2.5 border transition shadow-sm space-y-1 ${style.badge}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-white text-xs">{evt.summary}</span>
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border whitespace-nowrap ${style.pillBg}`}>
+                              {style.label}
+                            </span>
+                          </div>
+                          {evt.description && <p className="text-[9.5px] opacity-90 leading-tight">{evt.description}</p>}
+                        </div>
+                      );
+                    })
                   ) : (
-                    <p className="text-[9px] text-teal-300/60 italic">Tidak ada agenda pada tanggal ini.</p>
+                    <p className="text-[9px] text-teal-300/60 italic text-center py-2">Tidak ada agenda pada tanggal ini.</p>
                   )}
                 </div>
               )}
             </div>
 
             {/* Action 3: Event Creator Form */}
-            <form onSubmit={handleAddCalendarEvent} className="space-y-2 pt-2 border-t border-white/10">
+            <form onSubmit={handleAddCalendarEvent} className="space-y-2.5 pt-2 border-t border-white/10">
               <label className="text-[10px] font-bold text-teal-200 block uppercase tracking-wider">3. Tambah Event Baru</label>
-              <input
-                type="text"
-                placeholder="Judul Agenda (mis. Rembug Warga RT 01)..."
-                value={calendarTitle}
-                onChange={(e) => setCalendarTitle(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2.5 py-1.5 text-xs outline-none focus:border-teal-sedang font-medium"
-              />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="sm:col-span-2">
+                  <input
+                    type="text"
+                    placeholder="Judul Agenda (mis. Rembug Warga)..."
+                    value={calendarTitle}
+                    onChange={(e) => setCalendarTitle(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2.5 py-1.5 text-xs outline-none focus:border-teal-sedang font-medium"
+                  />
+                </div>
+                <div>
+                  <select
+                    value={calendarTargetGroup}
+                    onChange={(e) => setCalendarTargetGroup(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2 py-1.5 text-xs outline-none focus:border-teal-sedang font-bold"
+                  >
+                    <option value="55">🔵 Kelompok 55</option>
+                    <option value="56">🟢 Kelompok 56</option>
+                    <option value="57">🔴 Kelompok 57</option>
+                    <option value="semua">⭐ Semua</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[8px] font-black text-slate-400 block mb-0.5 uppercase">Mulai</label>
@@ -635,7 +718,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                     type="date"
                     value={calendarStart}
                     onChange={(e) => setCalendarStart(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2 py-1.5 text-xs outline-none focus:border-teal-sedang"
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2 py-1.5 text-xs outline-none focus:border-teal-sedang font-bold"
                   />
                 </div>
                 <div>
@@ -644,7 +727,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                     type="date"
                     value={calendarEnd}
                     onChange={(e) => setCalendarEnd(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2 py-1.5 text-xs outline-none focus:border-teal-sedang"
+                    className="w-full rounded-lg border border-slate-200 bg-white text-slate-900 px-2 py-1.5 text-xs outline-none focus:border-teal-sedang font-bold"
                   />
                 </div>
               </div>
