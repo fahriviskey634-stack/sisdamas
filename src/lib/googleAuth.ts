@@ -7,6 +7,34 @@ import path from 'path';
  * Runs entirely in Next.js Serverless Node.js runtime environment.
  */
 export async function getGoogleAccessToken(scopes: string[]): Promise<string> {
+  // 1. Cek apakah OAuth2 Refresh Token Pengguna (Akun Gmail Pribadi 15GB) dikonfigurasi
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (refreshToken && clientId && clientSecret && !refreshToken.includes('placeholder')) {
+    try {
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token'
+        })
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        return data.access_token;
+      }
+      console.warn('[Google Auth] Refresh token exchange warning:', data.error_description || data.error);
+    } catch (tokenErr) {
+      console.error('[Google Auth] Refresh token exchange error:', tokenErr);
+    }
+  }
+
+  // 2. Service Account Fallback
   let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
