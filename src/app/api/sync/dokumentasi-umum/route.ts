@@ -36,7 +36,7 @@ async function getOrCreateFolder(name: string, parentId: string, token: string):
   return folder.id;
 }
 
-async function uploadFileToDrive(base64Data: string, filename: string, mimeType: string, parentFolderId: string, token: string): Promise<string> {
+async function uploadFileToDrive(base64Data: string, filename: string, mimeType: string, parentFolderId: string, token: string): Promise<{ viewUrl: string; downloadUrl: string; driveUrl: string }> {
   const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
   const binaryBuffer = Buffer.from(cleanBase64, 'base64');
   const metadata = {
@@ -90,7 +90,13 @@ async function uploadFileToDrive(base64Data: string, filename: string, mimeType:
     console.error("Failed to set file permission:", e);
   }
 
-  return `https://docs.google.com/uc?export=download&id=${file.id}`;
+  const isVideo = mimeType.startsWith('video/');
+
+  return {
+    viewUrl: isVideo ? `https://drive.google.com/file/d/${file.id}/preview` : `https://lh3.googleusercontent.com/d/${file.id}=s1600`,
+    downloadUrl: `https://docs.google.com/uc?export=download&id=${file.id}`,
+    driveUrl: `https://drive.google.com/file/d/${file.id}/view`
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -106,8 +112,13 @@ export async function POST(req: NextRequest) {
     const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
     if (!gcpKey || !driveFolderId || gcpKey.includes('placeholder')) {
-      const mockUrls = photos.map((_, index) => `https://drive.google.com/open?id=mock-photo-general-${Date.now()}-${index}`);
-      return NextResponse.json({ urls: mockUrls });
+      const mockUrls = photos.map((_, index) => ({
+        viewUrl: `https://drive.google.com/open?id=mock-photo-general-${Date.now()}-${index}`,
+        downloadUrl: `https://drive.google.com/open?id=mock-photo-general-${Date.now()}-${index}`,
+        driveUrl: `https://drive.google.com/open?id=mock-photo-general-${Date.now()}-${index}`,
+        type: 'image'
+      }));
+      return NextResponse.json({ urls: mockUrls, dateString: new Date().toISOString(), folderName: galleryName });
     }
 
     const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/drive']);
@@ -134,11 +145,9 @@ export async function POST(req: NextRequest) {
         const isVideo = mimeType.startsWith('video/');
         const extension = isVideo ? (mimeType.split('/')[1] || 'mp4') : (mimeType.split('/')[1] || 'jpg');
         const filename = `dok_${galleryName.replace(/\s+/g, '_')}_${Date.now()}_${i}.${extension}`;
-        const directUrl = await uploadFileToDrive(photoUrl, filename, mimeType, targetFolderId, token);
+        const fileObj = await uploadFileToDrive(photoUrl, filename, mimeType, targetFolderId, token);
         urls.push({
-          viewUrl: directUrl,
-          downloadUrl: directUrl,
-          driveUrl: directUrl,
+          ...fileObj,
           type: isVideo ? 'video' : 'image'
         });
       } else {
