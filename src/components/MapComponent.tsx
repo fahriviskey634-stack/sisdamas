@@ -23,6 +23,87 @@ interface MapPin {
   photo_url?: string;
 }
 
+// Realistic sample pins for Desa Sukahaji Dusun 1, 2, and 3
+const INITIAL_DEMO_PINS: MapPin[] = [
+  {
+    id: 'pin-sukahaji-1',
+    kk_name: 'Bpk. Maman Rohman',
+    rt_label: 'RT 01 / RW 01 (Dusun 2)',
+    latitude: -6.7275,
+    longitude: 107.3789,
+    gps_accuracy: 4.2,
+    survey_status: 'verified',
+    welfare_level: 'Sejahtera I',
+    housing_status: 'Milik Sendiri',
+    housing_condition: 'Layak Huni',
+    family_size: 4,
+    problems: [
+      { category: 'Infrastruktur', description: 'Drainase selokan RT 01 tersumbat saat hujan' },
+      { category: 'Kesehatan', description: 'Perlu tambahan fasilitas posyandu lansia' }
+    ],
+    potentials: [
+      { category: 'Usaha Mikro/UMKM', description: 'Produksi keripik pisang skala rumah tangga' }
+    ]
+  },
+  {
+    id: 'pin-sukahaji-2',
+    kk_name: 'Bpk. Hendra Wijaya',
+    rt_label: 'RT 02 / RW 05 (Dusun 2)',
+    latitude: -6.7288,
+    longitude: 107.3802,
+    gps_accuracy: 3.8,
+    survey_status: 'completed',
+    welfare_level: 'Pra Sejahtera',
+    housing_status: 'Milik Sendiri',
+    housing_condition: 'Rutilahu (Perbaikan Atap)',
+    family_size: 5,
+    problems: [
+      { category: 'Infrastruktur', description: 'Atap bocor dan penerangan jalan belum memadai' }
+    ],
+    potentials: [
+      { category: 'Pertanian', description: 'Lahan kebun tomat 200m2' }
+    ]
+  },
+  {
+    id: 'pin-sukahaji-3',
+    kk_name: 'Bpk. Dadang Kusnadi',
+    rt_label: 'RT 01 / RW 03 (Dusun 1)',
+    latitude: -6.7252,
+    longitude: 107.3745,
+    gps_accuracy: 5.1,
+    survey_status: 'verified',
+    welfare_level: 'Sejahtera II',
+    housing_status: 'Milik Sendiri',
+    housing_condition: 'Layak Huni',
+    family_size: 3,
+    problems: [
+      { category: 'Ekonomi', description: 'Akses permodalan pupuk pertanian terbatas' }
+    ],
+    potentials: [
+      { category: 'Peternakan', description: 'Budidaya kambing perah' }
+    ]
+  },
+  {
+    id: 'pin-sukahaji-4',
+    kk_name: 'Bpk. Ujang Suherman',
+    rt_label: 'RT 03 / RW 08 (Dusun 3)',
+    latitude: -6.7315,
+    longitude: 107.3855,
+    gps_accuracy: 4.0,
+    survey_status: 'locked',
+    welfare_level: 'Sejahtera I',
+    housing_status: 'Milik Sendiri',
+    housing_condition: 'Layak Huni',
+    family_size: 4,
+    problems: [
+      { category: 'Lingkungan', description: 'Pengelolaan sampah wilayah RW 08 perlu tempat pembuangan terpadu' }
+    ],
+    potentials: [
+      { category: 'Keterampilan Khusus', description: 'Kerajinan anyaman bambu' }
+    ]
+  }
+];
+
 // Helper to create custom colored HTML markers with pulsing glow
 const createHtmlIcon = (color: string, number: number) => {
   return L.divIcon({
@@ -48,7 +129,7 @@ const SUKAHAJI_BOUNDS: L.LatLngBoundsExpression = [
 ];
 
 export default function MapComponent() {
-  const [pins, setPins] = useState<MapPin[]>([]);
+  const [pins, setPins] = useState<MapPin[]>(INITIAL_DEMO_PINS);
   const [rtFilter, setRtFilter] = useState('All');
   const [mapType, setMapType] = useState<'hybrid' | 'terrain' | 'osm'>('hybrid');
   const [colorMode, setColorMode] = useState<'problem' | 'status'>('problem');
@@ -138,7 +219,7 @@ export default function MapComponent() {
         photo_url: d.photo_url
       }));
 
-      const allMerged = [...loadedDbPins, ...draftPins];
+      const allMerged = [...INITIAL_DEMO_PINS, ...loadedDbPins, ...draftPins];
       const uniqueMap = new Map();
       allMerged.forEach(p => uniqueMap.set(p.id, p));
       setPins(Array.from(uniqueMap.values()));

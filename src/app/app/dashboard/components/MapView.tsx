@@ -66,19 +66,32 @@ export default function MapView() {
         <MapComponent />
       ) : (
         <div className="space-y-4 font-sans text-slate-800">
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
-            <span>💡 <strong>Mode Satelit Google Maps:</strong> Menampilkan Citra Satelit Google Maps resmi dengan Pin Marker Sensus interaktif (klik pin untuk melihat detail KK & keluhan).</span>
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xxs transition"
-            >
-              Buka Google Maps App ↗
-            </a>
-          </div>
+          <div className="h-[520px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative">
+            <iframe
+              title="Google Maps Desa Sukahaji"
+              src="https://www.google.com/maps?cid=2054103360592180660&output=embed"
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
 
-          <MapComponent />
+            {/* Floating Legenda Peta Tematik Card Overlay on Top-Right */}
+            <div className="absolute top-3 right-3 z-[10] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
+              <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block mb-1.5">
+                📍 Legenda Peta Tematik Sensus Desa Sukahaji
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold">
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444] shadow-sm" /> Infrastruktur</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6] shadow-sm" /> Kesehatan</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#10B981] shadow-sm" /> Ekonomi</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B] shadow-sm" /> Lingkungan</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#8B5CF6] shadow-sm" /> Pendidikan</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EC4899] shadow-sm" /> Sosial-Budaya</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E] shadow-sm" /> Terverifikasi</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
