@@ -129,18 +129,24 @@ export async function POST(req: NextRequest) {
     const urls = [];
     for (let i = 0; i < photos.length; i++) {
       const photoUrl = photos[i];
-      if (photoUrl.startsWith('data:image')) {
+      if (typeof photoUrl === 'string' && photoUrl.startsWith('data:')) {
         const mimeType = photoUrl.split(';')[0].split(':')[1] || 'image/jpeg';
-        const extension = mimeType.split('/')[1] || 'jpg';
+        const isVideo = mimeType.startsWith('video/');
+        const extension = isVideo ? (mimeType.split('/')[1] || 'mp4') : (mimeType.split('/')[1] || 'jpg');
         const filename = `dok_${galleryName.replace(/\s+/g, '_')}_${Date.now()}_${i}.${extension}`;
         const directUrl = await uploadFileToDrive(photoUrl, filename, mimeType, targetFolderId, token);
-        urls.push(directUrl);
+        urls.push({
+          viewUrl: directUrl,
+          downloadUrl: directUrl,
+          driveUrl: directUrl,
+          type: isVideo ? 'video' : 'image'
+        });
       } else {
         urls.push(photoUrl);
       }
     }
 
-    return NextResponse.json({ urls, dateString: dateFormatted });
+    return NextResponse.json({ urls, dateString: dateFormatted, folderName: `${dateFormatted} - ${galleryName}` });
   } catch (err: any) {
     console.error("Error in PDD dokumentasi sync:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
