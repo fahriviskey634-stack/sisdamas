@@ -17,12 +17,18 @@ export async function GET() {
 
     if (error) {
       console.error('[API Programs GET] Error:', error.message);
-      return NextResponse.json({ success: false, error: error.message, data: [] });
+      const errRes = NextResponse.json({ success: false, error: error.message, data: [] });
+      errRes.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      return errRes;
     }
 
-    return NextResponse.json({ success: true, data: data || [] });
+    const res = NextResponse.json({ success: true, data: data || [] });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    return res;
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message, data: [] });
+    const res = NextResponse.json({ success: false, error: err.message, data: [] });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    return res;
   }
 }
 

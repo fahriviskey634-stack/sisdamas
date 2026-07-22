@@ -66,11 +66,11 @@ export default function Siklus4View() {
       try { setPrograms(JSON.parse(savedProgs)); } catch {}
     }
 
-    // 2. Background revalidate dari cloud
+    // 2. Background revalidate dari cloud dengan cache-busting (bebas cache mobile)
     try {
-      const res = await fetch('/api/sync/programs');
+      const res = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && Array.isArray(result.data)) {
         setPrograms(result.data);
         localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
       }

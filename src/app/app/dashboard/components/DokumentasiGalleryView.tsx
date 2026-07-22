@@ -25,11 +25,11 @@ export default function DokumentasiGalleryView() {
 
     // 2. Background revalidate dari cloud
     try {
-      const res = await fetch('/api/sync/programs');
+      const res = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && result.data && result.data.length > 0) {
+      if (result.success && Array.isArray(result.data)) {
         setPrograms(result.data);
-        if (!selectedProgId) setSelectedProgId(result.data[0].id);
+        if (!selectedProgId && result.data.length > 0) setSelectedProgId(result.data[0].id);
         localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
       }
     } catch {}

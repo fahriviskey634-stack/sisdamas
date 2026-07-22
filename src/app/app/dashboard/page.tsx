@@ -162,6 +162,15 @@ function DashboardContent() {
             });
           }
         }
+
+        // 5. Cloud-to-Local Pull Sync untuk Perangkat Baru / HP
+        try {
+          const cloudProgRes = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
+          const cloudProgData = await cloudProgRes.json();
+          if (cloudProgData.success && Array.isArray(cloudProgData.data) && cloudProgData.data.length > 0) {
+            localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(cloudProgData.data));
+          }
+        } catch {}
       } catch (err) {
         console.warn('[Auto-Backup Cloud] Warning:', err);
       }
