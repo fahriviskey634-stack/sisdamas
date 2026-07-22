@@ -161,11 +161,51 @@ function DashboardSPA() {
           }
         }
 
-        // 3. Backup Siklus 4 (program)
+        // 3. Backup & Migrasi Foto Base64 Siklus 4 (program) ke Google Drive
         const localProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
         if (localProgs) {
           const parsed = JSON.parse(localProgs);
           if (parsed.length > 0) {
+            let progUpdated = false;
+            for (let p = 0; p < parsed.length; p++) {
+              const prog = parsed[p];
+              const photos = prog.photo_urls || [];
+              const base64Photos = photos
+                .map((u: any) => typeof u === 'string' ? u : (u.viewUrl || u.driveUrl || ''))
+                .filter((url: string) => url && url.startsWith('data:'));
+              
+              if (base64Photos.length > 0) {
+                try {
+                  const driveRes = await fetch('/api/sync/program-kerja', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ photos: base64Photos, programName: prog.name })
+                  });
+                  if (driveRes.ok) {
+                    const driveData = await driveRes.json();
+                    if (driveData.urls && driveData.urls.length > 0) {
+                      let driveIdx = 0;
+                      prog.photo_urls = photos.map((u: any) => {
+                        const raw = typeof u === 'string' ? u : (u.viewUrl || u.driveUrl || '');
+                        if (raw && raw.startsWith('data:')) {
+                          const newUrl = driveData.urls[driveIdx++];
+                          return newUrl || u;
+                        }
+                        return u;
+                      });
+                      progUpdated = true;
+                    }
+                  }
+                } catch (dErr) {
+                  console.warn('[Auto-Migrate Drive] Error:', dErr);
+                }
+              }
+            }
+
+            if (progUpdated) {
+              localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(parsed));
+            }
+
             await fetch('/api/sync/programs', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
