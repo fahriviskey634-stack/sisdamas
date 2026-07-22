@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Edit } from 'lucide-react';
+import { Trash2, Edit, Activity, Camera } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import DokumentasiGalleryView from './DokumentasiGalleryView';
 
 export default function Siklus4View() {
+  const [subTab, setSubTab] = useState<'programs' | 'gallery'>('programs');
   const [programs, setPrograms] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -304,7 +306,33 @@ export default function Siklus4View() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
+      {/* Sub-tab Navigation */}
+      <div className="flex border-b border-slate-200/80 gap-6">
+        <button
+          onClick={() => setSubTab('programs')}
+          className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition cursor-pointer flex items-center gap-2 ${
+            subTab === 'programs' ? 'text-teal-sedang' : 'text-slate-400 hover:text-slate-700'
+          }`}
+        >
+          <Activity className="h-4 w-4" /> Rencana & Evaluasi Program Kerja
+          {subTab === 'programs' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-sedang rounded" />}
+        </button>
+        <button
+          onClick={() => setSubTab('gallery')}
+          className={`pb-3 font-bold text-xs uppercase tracking-wider relative transition cursor-pointer flex items-center gap-2 ${
+            subTab === 'gallery' ? 'text-teal-sedang' : 'text-slate-400 hover:text-slate-700'
+          }`}
+        >
+          <Camera className="h-4 w-4" /> Galeri Dokumentasi Foto & Video (Google Drive)
+          {subTab === 'gallery' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-sedang rounded" />}
+        </button>
+      </div>
+
+      {subTab === 'gallery' ? (
+        <DokumentasiGalleryView />
+      ) : (
+        <>
+          <div className="flex justify-between items-center bg-slate-50 border border-slate-200/80 p-4 rounded-xl">
         <div>
           <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">
             TABEL 3. Rencana Program Kerja & Evaluasi
@@ -707,6 +735,8 @@ export default function Siklus4View() {
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

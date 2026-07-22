@@ -7,13 +7,10 @@ import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, RefreshCw, Aler
 import { DEFAULT_RT_TARGETS } from './components/constants';
 import DashboardView from './components/DashboardView';
 import Siklus2View from './components/Siklus2View';
-import SurveyWizardView from './components/SurveyWizardView';
-import MapView from './components/MapView';
 import PriorityView from './components/PriorityView';
 import LogbookView from './components/LogbookView';
 import Siklus4View from './components/Siklus4View';
 import StickyNotesView from './components/StickyNotesView';
-import DokumentasiGalleryView from './components/DokumentasiGalleryView';
 import ProfileView from './components/ProfileView';
 
 function DashboardContent() {
@@ -233,12 +230,10 @@ function DashboardContent() {
   const navItems = [
     { id: 'dashboard', label: 'Ringkasan', icon: LayoutDashboard },
     { id: 'sticky-notes', label: 'Siklus 1 (Rembug)', icon: StickyNote },
-    { id: 'surveys-new', label: 'Siklus 2 (Sensus)', icon: PlusCircle, badge: draftCount },
-    { id: 'map', label: 'Peta GIS', icon: Map },
+    { id: 'surveys-new', label: 'Siklus 2 (Sensus & Peta)', icon: PlusCircle, badge: draftCount },
     { id: 'priority', label: 'Siklus 3 (Prioritas)', icon: CheckSquare },
     { id: 'logbook', label: 'Logbook Harian', icon: BookOpen },
-    { id: 'siklus-4', label: 'Siklus 4 (Program)', icon: Activity },
-    { id: 'dokumentasi', label: 'Galeri Foto', icon: Camera },
+    { id: 'siklus-4', label: 'Siklus 4 (Program & Galeri)', icon: Activity },
     { id: 'profile', label: 'Profil & Pengaturan', icon: User },
   ];
 
@@ -373,17 +368,15 @@ function DashboardContent() {
           />
         )}
         {currentTab === 'sticky-notes' && <StickyNotesView />}
-        {currentTab === 'surveys-new' && (
+        {(currentTab === 'surveys-new' || currentTab === 'map') && (
           <Siklus2View 
             updateDraftCount={updateDraftCount} 
             currentUser={currentUser} 
           />
         )}
-        {currentTab === 'map' && <MapView />}
         {currentTab === 'priority' && <PriorityView />}
         {currentTab === 'logbook' && <LogbookView currentUser={currentUser} />}
-        {currentTab === 'siklus-4' && <Siklus4View />}
-        {currentTab === 'dokumentasi' && <DokumentasiGalleryView />}
+        {(currentTab === 'siklus-4' || currentTab === 'dokumentasi') && <Siklus4View />}
         {currentTab === 'profile' && (
           <ProfileView 
             handleLogout={handleLogout} 
