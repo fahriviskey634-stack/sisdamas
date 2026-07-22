@@ -236,25 +236,23 @@ function DashboardContent() {
           <div className="flex items-center gap-3">
             <div 
               onClick={() => setCurrentTab('dashboard')} 
-              className="flex items-center gap-2.5 cursor-pointer group"
+              className="flex items-center gap-3 cursor-pointer group"
             >
-              <div className="bg-white/10 p-1.5 rounded-xl border border-white/20 shadow-md group-hover:scale-105 transition">
-                <img 
-                  src="/logo-uin.png" 
-                  alt="Logo UIN Sunan Gunung Djati" 
-                  className="h-7 w-auto object-contain"
-                />
-              </div>
-              <div>
+              <img 
+                src="/logo-uin.png" 
+                alt="Logo UIN Sunan Gunung Djati" 
+                className="h-10 sm:h-11 w-auto object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="flex flex-col justify-center">
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-teal-200 transition">
+                  <span className="font-black text-base sm:text-lg tracking-wide text-white group-hover:text-amber-300 transition-colors uppercase leading-none">
                     SISDAMAS SUKAHAJI
                   </span>
-                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${groupConfig.badgeClass}`}>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border shadow-sm ${groupConfig.badgeClass}`}>
                     KKN {userGroup}
                   </span>
                 </div>
-                <span className="text-[10px] text-teal-100/70 font-semibold block -mt-0.5">
+                <span className="text-xs text-white/80 font-bold tracking-wide mt-1 block leading-none">
                   {currentUser?.dusun || groupConfig.dusun} Desa Sukahaji
                 </span>
               </div>

@@ -98,20 +98,18 @@ export default function LoginPage() {
         
         {/* Header Logo UIN Bandung */}
         <div className="mb-8 text-center">
-          <div className="bg-white/10 p-3 rounded-2xl w-24 h-24 mx-auto mb-4 border border-white/20 shadow-xl flex items-center justify-center backdrop-blur-md">
-            <img 
-              src="/logo-uin.png" 
-              alt="Logo UIN Sunan Gunung Djati Bandung" 
-              className="h-20 w-auto object-contain drop-shadow-md"
-            />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+          <img 
+            src="/logo-uin.png" 
+            alt="Logo UIN Sunan Gunung Djati Bandung" 
+            className="h-24 w-auto mx-auto mb-4 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
+          />
+          <h1 className="text-2xl md:text-3xl font-black tracking-wide text-white uppercase">
             SISDAMAS DIGITAL
           </h1>
-          <p className="mt-1.5 text-xs text-teal-200/80 font-medium">
-            Platform Digital KKN Desa Sukahaji (Kec. Cipeundeuy KBB)
+          <p className="mt-1 text-xs text-teal-200/90 font-semibold">
+            Platform KKN Desa Sukahaji (Kec. Cipeundeuy KBB)
           </p>
-          <div className="mt-2.5 flex items-center justify-center gap-1.5 text-xxs font-bold text-amber-300 bg-amber-500/10 py-1 px-3 rounded-full border border-amber-500/20 max-w-xs mx-auto">
+          <div className="mt-3 flex items-center justify-center gap-2 text-xxs font-extrabold text-amber-300 bg-amber-500/10 py-1.5 px-3.5 rounded-full border border-amber-500/25 max-w-xs mx-auto shadow-sm">
             <span>Kelompok 55</span> • <span>Kelompok 56</span> • <span>Kelompok 57</span>
           </div>
         </div>
