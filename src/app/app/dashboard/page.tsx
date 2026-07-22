@@ -209,9 +209,16 @@ function DashboardContent() {
     }
   };
 
-  const handleLogout = () => {
-    document.cookie = 'kkn-member-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.warn("Logout API call error:", e);
+    }
+    document.cookie = 'kkn-member-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+    document.cookie = 'sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+    document.cookie = 'sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+    window.location.href = '/login';
   };
 
   const navItems = [

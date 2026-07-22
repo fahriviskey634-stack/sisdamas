@@ -205,7 +205,6 @@ export default function MapComponent() {
             </select>
           </div>
 
-          {/* NEW: Toggle thematic coloring by problem category */}
           <div>
             <span className="text-xs font-semibold text-slate-700 uppercase mr-2">Pewarnaan Pin:</span>
             <select
@@ -217,6 +216,15 @@ export default function MapComponent() {
               <option value="status">Status Verifikasi Data</option>
             </select>
           </div>
+
+          <a
+            href="https://www.google.com/maps?cid=2054103360592180660"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-bold text-[#092430] bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
+          >
+            📍 Google Maps Desa Sukahaji ↗
+          </a>
         </div>
       </div>
 
