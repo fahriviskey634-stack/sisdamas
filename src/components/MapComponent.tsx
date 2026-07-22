@@ -456,8 +456,8 @@ export default function MapComponent() {
           })}
         </MapContainer>
 
-        {/* Floating Map Legend Card overlaying directly on top of the map */}
-        <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
+        {/* Floating Map Legend Card overlaying directly on top-right of the map */}
+        <div className="absolute top-3 right-3 z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
           <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block mb-1.5">
             📍 Legenda Peta Tematik Sensus Desa Sukahaji
           </span>

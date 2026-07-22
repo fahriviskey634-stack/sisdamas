@@ -76,8 +76,8 @@ export default function MapView() {
               referrerPolicy="no-referrer-when-downgrade"
             />
 
-            {/* Floating Legenda Peta Tematik Card Overlay */}
-            <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-[10] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
+            {/* Floating Legenda Peta Tematik Card Overlay on Top-Right */}
+            <div className="absolute top-3 right-3 z-[10] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
               <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block mb-1.5">
                 📍 Legenda Peta Tematik Sensus Desa Sukahaji
               </span>
