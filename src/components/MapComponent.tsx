@@ -331,30 +331,32 @@ export default function MapComponent() {
             );
           })}
         </MapContainer>
-      </div>
 
-      {/* NEW: Dynamic Map Legend Card overlaying below the map */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
-        <span className="text-xxs font-extrabold text-slate-400 uppercase tracking-wider block">Legenda Peta Tematik</span>
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 text-xxs font-bold text-slate-700">
-          {colorMode === 'status' ? (
-            <>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#22C55E]" /> Terkunci</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#3B82F6]" /> Terverifikasi</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#EAB308]" /> Dikirim (Draft)</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#EF4444]" /> Perlu Perbaikan</span>
-            </>
-          ) : (
-            <>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#EF4444]" /> Infrastruktur</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#3B82F6]" /> Kesehatan</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#10B981]" /> Ekonomi</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#F59E0B]" /> Lingkungan</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#8B5CF6]" /> Pendidikan</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#EC4899]" /> Sosial-Budaya</span>
-              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#94A3B8]" /> Tidak Ada Masalah</span>
-            </>
-          )}
+        {/* Floating Map Legend Card overlaying directly on top of the map */}
+        <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
+          <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block mb-1.5">
+            📍 Legenda Peta Tematik Sensus Desa Sukahaji
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold">
+            {colorMode === 'status' ? (
+              <>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E] shadow-sm" /> Terkunci</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6] shadow-sm" /> Terverifikasi</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EAB308] shadow-sm" /> Dikirim</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444] shadow-sm" /> Perlu Perbaikan</span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444] shadow-sm" /> Infrastruktur</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6] shadow-sm" /> Kesehatan</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#10B981] shadow-sm" /> Ekonomi</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B] shadow-sm" /> Lingkungan</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#8B5CF6] shadow-sm" /> Pendidikan</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EC4899] shadow-sm" /> Sosial-Budaya</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#94A3B8] shadow-sm" /> Tanpa Masalah</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
