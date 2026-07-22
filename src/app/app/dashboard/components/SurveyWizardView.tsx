@@ -34,6 +34,7 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
   const [newPotDesc, setNewPotDesc] = useState('');
 
   const [success, setSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleGetGPS = () => {
     if (!navigator.geolocation) return;
@@ -94,9 +95,9 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
     setPotentials((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const draft: DraftSurvey = {
-      client_uuid: 'draft-' + Math.random().toString(36).substring(2, 11),
+      client_uuid: 'survey-' + Math.random().toString(36).substring(2, 11),
       rt_id: selectedRt,
       rt_label: rtLabel,
       kk_name: kkName,
@@ -116,16 +117,44 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
       surveyor_id: currentUser?.nim || 'ADMIN56'
     };
 
+    // 1. Instant local backup (0ms delay)
     const existing = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
     existing.push(draft);
     localStorage.setItem('survey_drafts', JSON.stringify(existing));
-    
     updateDraftCount();
-    setSuccess('Draf survei berhasil disimpan secara lokal!');
+
+    setSaving(true);
+    setSuccess('⏳ Menyimpan data kuesioner otomatis ke Server Cloud & Supabase Database...');
+
+    // 2. Real-time automatic Cloud Direct Post to /api/surveys/sync
+    try {
+      const res = await fetch('/api/surveys/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drafts: [draft] })
+      });
+
+      if (res.ok) {
+        setSuccess(`✓ Sukses! Data Kuesioner "${kkName}" Berhasil Disimpan Otomatis ke Cloud Server!`);
+      } else {
+        setSuccess(`✓ Data tersimpan di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
+      }
+    } catch (e) {
+      setSuccess(`✓ Data tersimpan di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
+    } finally {
+      setSaving(false);
+    }
+
     setTimeout(() => {
+      setKkName('');
+      setKkNumber('');
+      setProblems([]);
+      setPotentials([]);
+      setPhotoBase64('');
+      setWStep(1);
       setSuccess('');
       if (switchTab) switchTab('dashboard');
-    }, 1500);
+    }, 2000);
   };
 
   return (
@@ -366,7 +395,9 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
 
           <div className="flex justify-between pt-4">
             <button onClick={() => setWStep(2)} className="rounded border border-slate-300/60 px-4 py-2 text-xs hover:bg-slate-50 transition">Kembali</button>
-            <button onClick={handleSave} className="rounded bg-teal-sedang hover:bg-kabut text-white px-5 py-2.5 text-xs font-bold transition">Simpan Draf Survei</button>
+            <button onClick={handleSave} disabled={saving} className="rounded-xl bg-teal-sedang hover:bg-[#113a48] disabled:opacity-50 text-white px-6 py-2.5 text-xs font-black transition shadow-md flex items-center gap-2 cursor-pointer">
+              {saving ? '⏳ Menyimpan ke Cloud...' : '☁️ Simpan Langsung ke Cloud'}
+            </button>
           </div>
         </div>
       )}
