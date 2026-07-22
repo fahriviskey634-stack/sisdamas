@@ -58,7 +58,8 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
     if (summary.includes('55') || summary.includes('dusun 1')) return '55';
     if (summary.includes('56') || summary.includes('dusun 2')) return '56';
     if (summary.includes('57') || summary.includes('dusun 3')) return '57';
-    return 'semua';
+    if (summary.includes('semua') || summary.includes('bersama')) return 'semua';
+    return '56';
   };
 
   // Fetch Google Calendar ID and Events list dynamically
