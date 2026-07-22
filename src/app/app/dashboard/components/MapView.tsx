@@ -6,7 +6,7 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
   loading: () => (
     <div className="h-[450px] w-full rounded-2xl border border-slate-300/60 bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-500">
-      Memuat Peta Sebaran Lapangan (Leaflet GIS)...
+      Memuat Peta Sebaran Lapangan (Google Satellite GIS)...
     </div>
   )
 });
@@ -37,7 +37,7 @@ export default function MapView() {
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <MapIcon className="h-3.5 w-3.5" /> Peta GIS Sensus
+              <MapIcon className="h-3.5 w-3.5" /> Peta Interaktif & Pin Sensus
             </button>
             <button
               onClick={() => setActiveMode('google')}
@@ -47,7 +47,7 @@ export default function MapView() {
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <Globe className="h-3.5 w-3.5" /> Google Maps Resmi
+              <Globe className="h-3.5 w-3.5" /> Google Maps Embed
             </button>
           </div>
 
@@ -65,15 +65,33 @@ export default function MapView() {
       {activeMode === 'leaflet' ? (
         <MapComponent />
       ) : (
-        <div className="h-[480px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative">
-          <iframe
-            title="Google Maps Desa Sukahaji"
-            src={`https://www.google.com/maps?cid=2054103360592180660&output=embed`}
-            className="w-full h-full border-0"
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+        <div className="space-y-4 font-sans text-slate-800">
+          <div className="h-[480px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative">
+            <iframe
+              title="Google Maps Desa Sukahaji"
+              src={`https://www.google.com/maps?cid=2054103360592180660&output=embed`}
+              className="w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+
+          {/* Legenda Peta Tematik Card Overlay for Google Maps Embed */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
+            <span className="text-xxs font-extrabold text-slate-400 uppercase tracking-wider block">
+              Legenda Peta Tematik Sensus Desa Sukahaji
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 text-xxs font-bold text-slate-700">
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#EF4444]" /> Infrastruktur</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#3B82F6]" /> Kesehatan</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#10B981]" /> Ekonomi</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#F59E0B]" /> Lingkungan</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#8B5CF6]" /> Pendidikan</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#EC4899]" /> Sosial-Budaya</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#22C55E]" /> Terverifikasi</span>
+            </div>
+          </div>
         </div>
       )}
     </div>
