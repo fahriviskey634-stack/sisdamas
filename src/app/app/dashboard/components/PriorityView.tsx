@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { PriorityItem } from './types';
+import { OFFICIAL_RT_RW_OPTIONS } from './constants';
 
 export default function PriorityView() {
   const [method, setMethod] = useState<'usg' | 'abcd'>('usg');
@@ -210,8 +211,8 @@ export default function PriorityView() {
             className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang"
           />
           <div className="flex gap-2">
-            <select value={newProbRt} onChange={(e) => setNewProbRt(e.target.value)} className="px-2 py-2 text-xs border border-slate-300 rounded-lg">
-              {['RT 01 / RW 01', 'RT 02 / RW 01', 'RT 03 / RW 01', 'RT 04 / RW 01'].map(rt => <option key={rt} value={rt}>{rt}</option>)}
+            <select value={newProbRt} onChange={(e) => setNewProbRt(e.target.value)} className="px-2 py-2 text-xs border border-slate-300 rounded-lg font-bold">
+              {OFFICIAL_RT_RW_OPTIONS.map(rt => <option key={rt} value={rt}>{rt}</option>)}
             </select>
             <button type="submit" className="bg-teal-sedang text-white px-4 py-2 text-xs font-bold rounded-lg hover:bg-teal-tua transition">Tambah</button>
           </div>

@@ -18,10 +18,16 @@ export const DEFAULT_RT_TARGETS: RtTarget[] = [
   { id: '10', rw: 'RW 06', rt: 'RT 02', target_kk: 66, target_warga: 205 },
   { id: '11', rw: 'RW 06', rt: 'RT 03', target_kk: 66, target_warga: 205 },
   { id: '12', rw: 'RW 06', rt: 'RT 04', target_kk: 65, target_warga: 200 },
-  // RW 11 — 3 RT ≈ 670 jiwa, 222 KK
   { id: '13', rw: 'RW 11', rt: 'RT 01', target_kk: 75, target_warga: 225 },
   { id: '14', rw: 'RW 11', rt: 'RT 02', target_kk: 75, target_warga: 225 },
   { id: '15', rw: 'RW 11', rt: 'RT 03', target_kk: 72, target_warga: 220 },
+];
+
+export const OFFICIAL_RT_RW_OPTIONS = [
+  'RT 01 / RW 01', 'RT 02 / RW 01', 'RT 03 / RW 01', 'RT 04 / RW 01',
+  'RT 01 / RW 05', 'RT 02 / RW 05', 'RT 03 / RW 05', 'RT 04 / RW 05',
+  'RT 01 / RW 06', 'RT 02 / RW 06', 'RT 03 / RW 06', 'RT 04 / RW 06',
+  'RT 01 / RW 11', 'RT 02 / RW 11', 'RT 03 / RW 11'
 ];
 
 export const KKN_MEMBERS: KKNMember[] = [

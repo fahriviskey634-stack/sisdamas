@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { OFFICIAL_RT_RW_OPTIONS } from './constants';
 
 const COLUMNS: ('Aspirasi' | 'Masalah' | 'Potensi' | 'Lainnya')[] = ['Aspirasi', 'Masalah', 'Potensi', 'Lainnya'];
 
@@ -117,21 +118,15 @@ export default function StickyNotesView() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xxs font-semibold text-slate-500 uppercase">RT / RW</label>
+            <label className="mb-1 block text-xxs font-semibold text-slate-500 uppercase">RT / RW (Dusun 2)</label>
             <select
               value={rtNumber}
               onChange={(e) => setRtNumber(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 text-slate-900 bg-white px-3 py-2.5 text-xs outline-none focus:border-transisi transition"
+              className="w-full rounded-lg border border-slate-300 text-slate-900 bg-white px-3 py-2.5 text-xs outline-none focus:border-transisi transition font-bold"
             >
-              <option value="RT 01 / RW 01">RT 01 / RW 01</option>
-              <option value="RT 02 / RW 01">RT 02 / RW 01</option>
-              <option value="RT 03 / RW 01">RT 03 / RW 01</option>
-              <option value="RT 01 / RW 02">RT 01 / RW 02</option>
-              <option value="RT 02 / RW 02">RT 02 / RW 02</option>
-              <option value="RT 03 / RW 02">RT 03 / RW 02</option>
-              <option value="RT 01 / RW 03">RT 01 / RW 03</option>
-              <option value="RT 02 / RW 03">RT 02 / RW 03</option>
-              <option value="RT 03 / RW 03">RT 03 / RW 03</option>
+              {OFFICIAL_RT_RW_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 md:col-span-4 mt-2">

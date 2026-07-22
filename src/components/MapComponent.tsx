@@ -185,10 +185,11 @@ export default function MapComponent() {
               onChange={(e) => setRtFilter(e.target.value)}
               className="rounded-lg border border-slate-300 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-indigo-500 transition"
             >
-              <option value="All">Semua Wilayah RT/RW</option>
+              <option value="All">Semua Wilayah RT/RW (Dusun 2)</option>
               <option value="RW 01">RW 01</option>
-              <option value="RW 02">RW 02</option>
-              <option value="RW 03">RW 03</option>
+              <option value="RW 05">RW 05</option>
+              <option value="RW 06">RW 06</option>
+              <option value="RW 11">RW 11</option>
             </select>
           </div>
           
