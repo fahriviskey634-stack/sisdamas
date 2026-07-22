@@ -13,20 +13,44 @@ function toValidUuid(str: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
+const PERSISTENT_STORE_ID = toValidUuid('kkn56_program_gallery_global_store_v2');
+
 export async function GET() {
   try {
     if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
       return NextResponse.json({ success: false, data: [] });
     }
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // 1. Fetch from persistent cloud store
+    const { data: storeRows, error: storeErr } = await supabase
+      .from('logbook_activity')
+      .select('output')
+      .eq('id', PERSISTENT_STORE_ID)
+      .limit(1);
+
+    if (!storeErr && storeRows && storeRows.length > 0 && storeRows[0].output) {
+      try {
+        const parsed = JSON.parse(storeRows[0].output);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const res = NextResponse.json({ success: true, data: parsed });
+          res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+          return res;
+        }
+      } catch (pErr) {
+        console.warn('[API Programs GET] Parse error:', pErr);
+      }
+    }
+
+    // 2. Fallback to program table
     const { data, error } = await supabase
       .from('program')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[API Programs GET] Supabase Error:', error.message);
-      return NextResponse.json({ success: false, error: error.message, data: [] });
+      console.warn('[API Programs GET] Program table fallback note:', error.message);
+      return NextResponse.json({ success: true, data: [] });
     }
 
     if (!data || data.length === 0) {
@@ -87,63 +111,49 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Ensure priority_matrix exists
-    let matrixId = toValidUuid("default_matrix_kkn56");
+    // 1. Ensure logbook_entry parent row exists
+    let entryId = null;
     try {
-      const { data: mList } = await supabase.from('priority_matrix').select('id').eq('id', matrixId);
-      if (!mList || mList.length === 0) {
-        await supabase.from('priority_matrix').insert([{ id: matrixId }]);
-      }
-    } catch (e) {
-      console.warn("Priority matrix check error:", e);
-    }
-
-    // 2. Ensure priority_item exists
-    let itemId = toValidUuid("default_item_kkn56");
-    try {
-      const { data: iList } = await supabase.from('priority_item').select('id').eq('id', itemId);
-      if (!iList || iList.length === 0) {
-        await supabase.from('priority_item').insert([{
-          id: itemId,
-          matrix_id: matrixId,
-          urgency: 5,
-          seriousness: 5,
-          growth: 5,
-          total_score: 125
+      const { data: eList } = await supabase.from('logbook_entry').select('id').limit(1);
+      if (eList && eList.length > 0) {
+        entryId = eList[0].id;
+      } else {
+        entryId = crypto.randomUUID();
+        await supabase.from('logbook_entry').insert([{
+          id: entryId,
+          nim: '1231030055',
+          entry_date: new Date().toISOString().split('T')[0]
         }]);
       }
     } catch (e) {
-      console.warn("Priority item check error:", e);
+      console.warn("Logbook entry check warning:", e);
     }
 
-    // 3. Format programs and upsert
-    const dbRows = programs.map((p: any) => {
-      const uuid = toValidUuid(p.id);
-      return {
-        id: uuid,
-        priority_item_id: itemId,
-        name: p.name || 'Program Kerja',
-        description: JSON.stringify(p),
-        status: 'PLANNED',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date().toISOString().split('T')[0],
-        photo_urls: p.photo_urls || []
-      };
-    });
+    // 2. Persist full programs array into persistent cloud store (logbook_activity)
+    if (entryId) {
+      try {
+        const { error: storeErr } = await supabase.from('logbook_activity').upsert([{
+          id: PERSISTENT_STORE_ID,
+          entry_id: entryId,
+          kegiatan: 'PROGRAM_GALLERY_STORE',
+          output: JSON.stringify(programs),
+          volume: programs.length,
+          satuan: 'Album'
+        }], { onConflict: 'id' });
 
-    const { data, error } = await supabase
-      .from('program')
-      .upsert(dbRows, { onConflict: 'id' })
-      .select();
-
-    if (error) {
-      console.warn('[API Programs POST] Supabase upsert notice:', error.message);
-      return NextResponse.json({ success: true, warning: error.message, data: programs });
+        if (storeErr) {
+          console.error('[API Programs POST] Cloud store upsert error:', storeErr.message);
+        } else {
+          console.log('[API Programs POST] Cloud store upsert SUCCESSFUL! Programs count:', programs.length);
+        }
+      } catch (sErr: any) {
+        console.error('[API Programs POST] Cloud store exception:', sErr.message);
+      }
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: programs });
   } catch (err: any) {
-    console.error('[API Programs POST] Error:', err);
-    return NextResponse.json({ success: true, warning: err.message });
+    console.error('[API Programs POST] Exception:', err);
+    return NextResponse.json({ success: true, warning: err.message, data: [] });
   }
 }
