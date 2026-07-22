@@ -29,8 +29,8 @@ const INITIAL_DEMO_PINS: MapPin[] = [
     id: 'pin-sukahaji-1',
     kk_name: 'Bpk. Maman Rohman',
     rt_label: 'RT 01 / RW 01 (Dusun 2)',
-    latitude: -6.7275,
-    longitude: 107.3789,
+    latitude: -6.7268,
+    longitude: 107.3645,
     gps_accuracy: 4.2,
     survey_status: 'verified',
     welfare_level: 'Sejahtera I',
@@ -49,8 +49,8 @@ const INITIAL_DEMO_PINS: MapPin[] = [
     id: 'pin-sukahaji-2',
     kk_name: 'Bpk. Hendra Wijaya',
     rt_label: 'RT 02 / RW 05 (Dusun 2)',
-    latitude: -6.7288,
-    longitude: 107.3802,
+    latitude: -6.7285,
+    longitude: 107.3620,
     gps_accuracy: 3.8,
     survey_status: 'completed',
     welfare_level: 'Pra Sejahtera',
@@ -68,8 +68,8 @@ const INITIAL_DEMO_PINS: MapPin[] = [
     id: 'pin-sukahaji-3',
     kk_name: 'Bpk. Dadang Kusnadi',
     rt_label: 'RT 01 / RW 03 (Dusun 1)',
-    latitude: -6.7252,
-    longitude: 107.3745,
+    latitude: -6.7235,
+    longitude: 107.3580,
     gps_accuracy: 5.1,
     survey_status: 'verified',
     welfare_level: 'Sejahtera II',
@@ -87,8 +87,8 @@ const INITIAL_DEMO_PINS: MapPin[] = [
     id: 'pin-sukahaji-4',
     kk_name: 'Bpk. Ujang Suherman',
     rt_label: 'RT 03 / RW 08 (Dusun 3)',
-    latitude: -6.7315,
-    longitude: 107.3855,
+    latitude: -6.7330,
+    longitude: 107.3650,
     gps_accuracy: 4.0,
     survey_status: 'locked',
     welfare_level: 'Sejahtera I',
@@ -316,7 +316,7 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
       {/* Leaflet Map Container */}
       <div className="h-[520px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-10">
         <MapContainer
-          center={[-6.7270, 107.3800]}
+          center={[-6.7290, 107.3650]}
           zoom={14}
           minZoom={11}
           maxZoom={20}
