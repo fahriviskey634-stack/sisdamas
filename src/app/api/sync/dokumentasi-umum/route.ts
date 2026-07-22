@@ -102,7 +102,7 @@ async function uploadFileToDrive(base64Data: string, filename: string, mimeType:
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { galleryName, photos } = body;
+    const { galleryName, photos, group = '56' } = body;
 
     if (!galleryName || !photos || !Array.isArray(photos)) {
       return NextResponse.json({ error: 'Format data tidak valid' }, { status: 400 });
@@ -122,10 +122,14 @@ export async function POST(req: NextRequest) {
     const dateFormatted = `${date.getDate()} ${indMonths[date.getMonth()]} ${date.getFullYear()}`;
     const folderTitle = `${dateFormatted} - ${galleryName}`;
 
+    // Group Folder Name
+    const groupFolderName = group === '55' ? 'Kelompok 55 - Dusun 1' : (group === '57' ? 'Kelompok 57 - Dusun 3' : 'Kelompok 56 - Dusun 2');
+
     try {
       token = await getGoogleAccessToken(['https://www.googleapis.com/auth/drive']);
       if (token) {
-        const rootDokumentasiFolder = await getOrCreateFolder('Dokumentasi', driveFolderId, token);
+        const groupFolderId = await getOrCreateFolder(groupFolderName, driveFolderId, token);
+        const rootDokumentasiFolder = await getOrCreateFolder('Dokumentasi', groupFolderId, token);
         targetFolderId = await getOrCreateFolder(folderTitle, rootDokumentasiFolder, token);
       }
     } catch (authErr: any) {

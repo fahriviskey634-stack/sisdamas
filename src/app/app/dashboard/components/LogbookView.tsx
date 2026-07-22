@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Printer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KKN_MEMBERS } from './constants';
+import { KKN_MEMBERS, GROUP_PALETTES } from './constants';
 
 export default function LogbookView({ currentUser }: { currentUser: any }) {
   const [activeNim, setActiveNim] = useState<string>('');
@@ -163,6 +163,8 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
   };
 
   const activeMember = KKN_MEMBERS.find(m => m.nim === activeNim) || currentUser;
+  const userGroup = (activeMember?.group || currentUser?.group || '56') as '55' | '56' | '57';
+  const groupConfig = GROUP_PALETTES[userGroup] || GROUP_PALETTES['56'];
 
   return (
     <div className="space-y-6">
@@ -183,7 +185,7 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                   className="rounded-xl border border-slate-250 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-teal-sedang transition font-bold"
                 >
                   {KKN_MEMBERS.map(m => (
-                    <option key={m.nim} value={m.nim}>{m.name} ({m.division})</option>
+                    <option key={m.nim} value={m.nim}>{m.name} ({m.division} - Kelompok {m.group || '56'})</option>
                   ))}
                 </select>
               </div>
@@ -214,7 +216,9 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
           </div>
           <div className="space-y-1">
             <span className="font-black text-slate-400 uppercase">Kelompok / Lokasi KKN</span>
-            <p className="font-bold text-slate-800 text-xs truncate">Kelompok 56 / Dusun 2, Desa Sukahaji</p>
+            <p className="font-bold text-slate-800 text-xs truncate">
+              Kelompok {userGroup} / {activeMember?.dusun || groupConfig.dusun}, Desa Sukahaji
+            </p>
           </div>
         </div>
       </div>
@@ -465,14 +469,6 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                 >
                   Unduh Word (Semua)
                 </a>
-                {activeNim === '1231030055' && (
-                  <a
-                    href={`/api/export/logbook-kelompok?format=docx`}
-                    className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
-                  >
-                    Unduh LPJ Gabungan (Word)
-                  </a>
-                )}
                 <button
                   onClick={() => setShowPrintModal(false)}
                   className="rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xxs font-bold px-3 py-1.5 transition cursor-pointer"
@@ -540,7 +536,9 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                 }
               `}</style>
 
-              <div className="text-center pb-4">
+              {/* Logo UIN Header */}
+              <div className="text-center pb-4 border-b-2 border-black mb-4">
+                <img src="/logo-uin.png" alt="Logo UIN Bandung" className="h-16 w-auto mx-auto mb-2 object-contain" />
                 <h1 className="text-md font-bold uppercase tracking-wider text-black m-0" style={{ fontSize: '14pt' }}>LOGBOOK KKN SISDAMAS</h1>
                 <h2 className="text-sm font-bold uppercase tracking-wide text-[#000000] mt-1" style={{ fontSize: '12pt' }}>UIN SUNAN GUNUNG DJATI BANDUNG</h2>
                 <h3 className="text-xs font-bold text-[#000000] mt-1" style={{ fontSize: '11pt' }}>TAHUN AKADEMIK 2025/2026</h3>
@@ -551,8 +549,8 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                   <li><strong>Nama:</strong> {activeMember?.name || '-'}</li>
                   <li><strong>NIM / Prodi:</strong> {activeMember?.nim || '-'} / {activeMember?.prodi || '-'}</li>
                   <li><strong>Fakultas:</strong> {activeMember?.fakultas || '-'}</li>
-                  <li><strong>Kelompok:</strong> Kelompok 56</li>
-                  <li><strong>Lokasi:</strong> Dusun 2, Desa Sukahaji, Kecamatan Cipeundeuy, Kabupaten Bandung Barat, Provinsi Jawa Barat</li>
+                  <li><strong>Kelompok:</strong> Kelompok {userGroup}</li>
+                  <li><strong>Lokasi:</strong> {activeMember?.dusun || groupConfig.dusun}, Desa Sukahaji, Kecamatan Cipeundeuy, Kabupaten Bandung Barat, Provinsi Jawa Barat</li>
                 </ol>
               </div>
 
@@ -623,8 +621,8 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                     <p className="font-bold mt-1">Ketua Kelompok,</p>
                   </div>
                   <div>
-                    <p className="font-bold m-0">Arpan Maulana</p>
-                    <p className="mt-1">NIM. 1231030055</p>
+                    <p className="font-bold m-0">{groupConfig.ketuaName}</p>
+                    <p className="mt-1">NIM. {groupConfig.ketuaNim}</p>
                   </div>
                 </div>
               </div>

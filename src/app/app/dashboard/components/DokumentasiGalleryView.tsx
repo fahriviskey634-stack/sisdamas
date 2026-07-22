@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Plus, Upload, X, Image as ImageIcon, Video as VideoIcon, RefreshCw, Download, FolderPlus, Folder } from 'lucide-react';
+import { Camera, Plus, Upload, X, Image as ImageIcon, Video as VideoIcon, RefreshCw, Download, FolderPlus, Folder, Filter } from 'lucide-react';
 import { normalizeMedia, downloadSingleMedia } from './utils';
 
 export default function DokumentasiGalleryView() {
   const [programs, setPrograms] = useState<any[]>([]);
   const [selectedProgId, setSelectedProgId] = useState<string>('');
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all'); // 'all' | '55' | '56' | '57'
   const [lightboxUrl, setLightboxUrl] = useState<string>('');
   const [lightboxType, setLightboxType] = useState<string>('image');
 
@@ -51,7 +52,18 @@ export default function DokumentasiGalleryView() {
     } catch {}
   };
 
-  const activeProg = programs.find((p: any) => p.id === selectedProgId);
+  // Filter programs based on selected group
+  const filteredPrograms = programs.filter((p: any) => {
+    if (selectedGroupFilter === 'all') return true;
+    if (p.group) return p.group === selectedGroupFilter;
+    // Fallback: check if description or name contains group tag
+    if (selectedGroupFilter === '55' && (p.name.includes('55') || p.description?.includes('55'))) return true;
+    if (selectedGroupFilter === '57' && (p.name.includes('57') || p.description?.includes('57'))) return true;
+    if (selectedGroupFilter === '56' && (!p.name.includes('55') && !p.name.includes('57'))) return true;
+    return selectedGroupFilter === '56';
+  });
+
+  const activeProg = filteredPrograms.find((p: any) => p.id === selectedProgId) || filteredPrograms[0] || programs.find((p: any) => p.id === selectedProgId);
   const mediaItems = activeProg?.photo_urls?.map(normalizeMedia) || [];
 
   const handleDownloadAll = () => {
@@ -150,8 +162,10 @@ export default function DokumentasiGalleryView() {
       folderTitle = p ? p.name : 'Dokumentasi Kegiatan KKN';
     }
 
+    const currentGroup = selectedGroupFilter === 'all' ? '56' : selectedGroupFilter;
+
     setUploading(true);
-    setUploadStatus(`Membuat folder "${folderTitle}" di Google Drive & mengunggah media...`);
+    setUploadStatus(`Membuat folder "${folderTitle}" di Google Drive Kelompok ${currentGroup}...`);
     setUploadError('');
 
     try {
@@ -162,7 +176,8 @@ export default function DokumentasiGalleryView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           galleryName: folderTitle,
-          photos: base64Photos
+          photos: base64Photos,
+          group: currentGroup
         })
       });
 
@@ -203,12 +218,13 @@ export default function DokumentasiGalleryView() {
           location: 'Desa Sukahaji',
           target: 'Dokumentasi Publik',
           budget: '-',
-          pic: 'Tim PDD KKN 56',
+          pic: `Tim PDD KKN ${currentGroup}`,
           status: 'Completed',
           progress: 100,
           description: `Folder Drive: ${data.folderName || folderTitle}`,
           evaluation: '',
-          photo_urls: newViewUrls
+          photo_urls: newViewUrls,
+          group: currentGroup
         };
         updatedPrograms = [newProg, ...updatedPrograms];
         targetProgId = newProg.id;
@@ -218,7 +234,8 @@ export default function DokumentasiGalleryView() {
           if (p.id === uploadTargetProgId) {
             return {
               ...p,
-              photo_urls: [...(p.photo_urls || []), ...newViewUrls]
+              photo_urls: [...(p.photo_urls || []), ...newViewUrls],
+              group: p.group || currentGroup
             };
           }
           return p;
@@ -265,7 +282,7 @@ export default function DokumentasiGalleryView() {
             <button
               onClick={() => {
                 setShowUploadModal(true);
-                if (programs.length > 0 && !uploadTargetProgId) setUploadTargetProgId(programs[0].id);
+                if (filteredPrograms.length > 0 && !uploadTargetProgId) setUploadTargetProgId(filteredPrograms[0].id);
               }}
               className="rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white text-[10px] font-bold px-4 py-2 flex items-center gap-1.5 cursor-pointer shadow-sm transition whitespace-nowrap"
             >
@@ -283,18 +300,68 @@ export default function DokumentasiGalleryView() {
           </div>
         </div>
 
-        <div className="max-w-md">
-          <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Pilih Album / Program Kerja</label>
+        {/* Group Filter Selector (Semua, 55, 56, 57) */}
+        <div className="space-y-2 border-t border-slate-100 pt-3">
+          <label className="text-[9px] font-black text-slate-400 flex items-center gap-1.5 uppercase">
+            <Filter className="h-3 w-3 text-teal-600" /> Filter Kelompok / Wilayah Dusun:
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setSelectedGroupFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                selectedGroupFilter === 'all'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              📌 Semua Kelompok Sukahaji
+            </button>
+            <button
+              onClick={() => setSelectedGroupFilter('55')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                selectedGroupFilter === '55'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                  : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+              }`}
+            >
+              🔵 Kelompok 55 (Dusun 1)
+            </button>
+            <button
+              onClick={() => setSelectedGroupFilter('56')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                selectedGroupFilter === '56'
+                  ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                  : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
+              }`}
+            >
+              🟢 Kelompok 56 (Dusun 2)
+            </button>
+            <button
+              onClick={() => setSelectedGroupFilter('57')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                selectedGroupFilter === '57'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              🔴 Kelompok 57 (Dusun 3)
+            </button>
+          </div>
+        </div>
+
+        {/* Album Selector */}
+        <div className="max-w-md pt-1">
+          <label className="text-[9px] font-black text-slate-400 block mb-1 uppercase">Pilih Album / Program Kerja ({filteredPrograms.length} Album)</label>
           <select
             value={selectedProgId}
             onChange={(e) => setSelectedProgId(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
+            className="w-full rounded-xl border border-slate-200 bg-white text-slate-950 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
           >
-            {programs.map((p: any) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+            {filteredPrograms.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name} {p.group ? `(Kelompok ${p.group})` : ''}</option>
             ))}
-            {programs.length === 0 && (
-              <option value="">(Belum ada album dokumentasi)</option>
+            {filteredPrograms.length === 0 && (
+              <option value="">(Belum ada album untuk kelompok ini)</option>
             )}
           </select>
         </div>
@@ -415,7 +482,7 @@ export default function DokumentasiGalleryView() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center text-slate-400 space-y-3 shadow-sm">
           <Camera className="h-10 w-10 mx-auto text-slate-300" />
-          <p className="font-semibold text-sm">Belum ada album dokumentasi terdaftar</p>
+          <p className="font-semibold text-sm">Belum ada album dokumentasi terdaftar untuk filter ini</p>
           <button
             onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center gap-1.5 rounded-xl bg-teal-sedang text-white text-xs font-bold px-4 py-2 hover:bg-[#113a48] transition cursor-pointer"
@@ -436,7 +503,7 @@ export default function DokumentasiGalleryView() {
                 </div>
                 <div>
                   <h3 className="font-black text-slate-800 text-sm">Unggah Media & Buat Folder Google Drive</h3>
-                  <p className="text-[10px] text-slate-400">File akan otomatis tersimpan dalam folder khusus di Google Drive KKN 56.</p>
+                  <p className="text-[10px] text-slate-400">File akan otomatis tersimpan dalam subfolder kelompok di Google Drive.</p>
                 </div>
               </div>
               <button
@@ -479,10 +546,10 @@ export default function DokumentasiGalleryView() {
                     onChange={(e) => setUploadTargetProgId(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-white text-slate-900 px-3 py-2 text-xs outline-none focus:border-teal-sedang font-bold"
                   >
-                    {programs.map((p: any) => (
+                    {filteredPrograms.map((p: any) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                    {programs.length === 0 && (
+                    {filteredPrograms.length === 0 && (
                       <option value="">(Belum ada program kerja)</option>
                     )}
                   </select>

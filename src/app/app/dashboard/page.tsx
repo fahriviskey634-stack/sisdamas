@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, RefreshCw, AlertCircle, PlusCircle, Map, Activity, Camera, Menu, X, BookOpen } from 'lucide-react';
 
-import { DEFAULT_RT_TARGETS } from './components/constants';
+import { DEFAULT_RT_TARGETS, GROUP_PALETTES } from './components/constants';
 import DashboardView from './components/DashboardView';
 import Siklus2View from './components/Siklus2View';
 import PriorityView from './components/PriorityView';
@@ -99,117 +99,105 @@ function DashboardContent() {
         if (localProgs) {
           const parsed = JSON.parse(localProgs);
           if (parsed.length > 0) {
-            let progUpdated = false;
-            for (let p = 0; p < parsed.length; p++) {
-              const prog = parsed[p];
-              const photos = prog.photo_urls || [];
-              const base64Photos = photos
-                .map((u: any) => typeof u === 'string' ? u : (u.viewUrl || u.driveUrl || ''))
-                .filter((url: string) => url && url.startsWith('data:'));
-              
-              if (base64Photos.length > 0) {
-                try {
-                  const driveRes = await fetch('/api/sync/program-kerja', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ photos: base64Photos, programName: prog.name })
-                  });
-                  if (driveRes.ok) {
-                    const driveData = await driveRes.json();
-                    if (driveData.urls && driveData.urls.length > 0) {
-                      let driveIdx = 0;
-                      prog.photo_urls = photos.map((u: any) => {
-                        const raw = typeof u === 'string' ? u : (u.viewUrl || u.driveUrl || '');
-                        if (raw && raw.startsWith('data:')) {
-                          const newUrl = driveData.urls[driveIdx++];
-                          return newUrl || u;
-                        }
-                        return u;
+            let hasBase64 = false;
+            const updatedProgs = await Promise.all(parsed.map(async (prog: any) => {
+              if (prog.photo_urls && Array.isArray(prog.photo_urls)) {
+                const newPhotos = await Promise.all(prog.photo_urls.map(async (p: any) => {
+                  const urlStr = typeof p === 'string' ? p : (p.viewUrl || p.url || '');
+                  if (typeof urlStr === 'string' && urlStr.startsWith('data:')) {
+                    hasBase64 = true;
+                    try {
+                      const res = await fetch('/api/sync/dokumentasi-umum', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          galleryName: prog.name || 'Dokumentasi Kegiatan',
+                          photos: [urlStr],
+                          group: currentUser?.group || '56'
+                        })
                       });
-                      progUpdated = true;
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.urls && data.urls.length > 0) {
+                          return data.urls[0];
+                        }
+                      }
+                    } catch (e) {
+                      console.warn('Auto drive upload error:', e);
                     }
                   }
-                } catch (dErr) {
-                  console.warn('[Auto-Migrate Drive] Error:', dErr);
-                }
+                  return p;
+                }));
+                return { ...prog, photo_urls: newPhotos };
               }
-            }
+              return prog;
+            }));
 
-            if (progUpdated) {
-              localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(parsed));
+            if (hasBase64) {
+              localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedProgs));
             }
 
             await fetch('/api/sync/programs', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ programs: parsed })
+              body: JSON.stringify({ programs: updatedProgs })
             });
           }
         }
-
-        // 4. Backup Draf Sensus
-        const localDrafts = localStorage.getItem('survey_drafts');
-        if (localDrafts) {
-          const drafts = JSON.parse(localDrafts);
-          if (drafts.length > 0) {
-            await fetch('/api/surveys/sync', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ surveys: drafts })
-            });
-          }
-        }
-
-        // 5. Cloud-to-Local Pull Sync untuk Perangkat Baru / HP
-        try {
-          const cloudProgRes = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
-          const cloudProgData = await cloudProgRes.json();
-          if (cloudProgData.success && Array.isArray(cloudProgData.data) && cloudProgData.data.length > 0) {
-            localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(cloudProgData.data));
-          }
-        } catch {}
       } catch (err) {
-        console.warn('[Auto-Backup Cloud] Warning:', err);
+        console.warn('Auto backup exception:', err);
       }
     };
 
-    const timer = setTimeout(() => {
+    if (currentUser) {
       autoMigrateLocalStorageToCloud();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [currentUser]);
 
   const updateDraftCount = () => {
-    const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
-    setDraftCount(drafts.length);
+    const saved = localStorage.getItem('sukahaji_draft_surveys');
+    if (saved) {
+      try {
+        const drafts = JSON.parse(saved);
+        setDraftCount(drafts.length);
+      } catch {
+        setDraftCount(0);
+      }
+    } else {
+      setDraftCount(0);
+    }
   };
 
   const handleSyncDrafts = async () => {
-    const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
-    if (drafts.length === 0) return;
-
-    setSyncing(true);
-    setSyncStatus('Mengunggah draf ke server...');
+    const saved = localStorage.getItem('sukahaji_draft_surveys');
+    if (!saved) return;
 
     try {
+      const drafts = JSON.parse(saved);
+      if (drafts.length === 0) return;
+
+      setSyncing(true);
+      setSyncStatus(`Mengirim ${drafts.length} data survei ke server cloud...`);
+
       const res = await fetch('/api/surveys/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ surveys: drafts })
+        body: JSON.stringify({ drafts })
       });
 
       const data = await res.json();
 
-      if (res.ok && data.success) {
-        localStorage.removeItem('survey_drafts');
-        updateDraftCount();
-        setSyncStatus(`✓ Sukses! ${data.synced_count} draf berhasil dikirim ke database.`);
-        setTimeout(() => setSyncStatus(''), 4000);
-      } else {
-        setSyncStatus(`Gagal sync: ${data.error || 'Server error'}`);
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal sinkronisasi');
       }
+
+      localStorage.removeItem('sukahaji_draft_surveys');
+      updateDraftCount();
+      setSyncStatus(`✓ Berhasil mengirim ${drafts.length} data survei!`);
+      setTimeout(() => setSyncStatus(''), 3000);
     } catch (err: any) {
-      setSyncStatus(`Error koneksi: ${err.message}`);
+      setSyncStatus(`⚠ Error: ${err.message}`);
+      setTimeout(() => setSyncStatus(''), 4000);
     } finally {
       setSyncing(false);
     }
@@ -218,58 +206,63 @@ function DashboardContent() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
-      console.warn("Logout API call error:", e);
-    }
-    document.cookie = 'kkn-member-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
-    document.cookie = 'sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
-    document.cookie = 'sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
-    window.location.href = '/login';
+    } catch {}
+    document.cookie = 'sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'kkn-member-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    router.push('/login');
   };
 
+  const userGroup = (currentUser?.group || '56') as '55' | '56' | '57';
+  const groupConfig = GROUP_PALETTES[userGroup] || GROUP_PALETTES['56'];
+
   const navItems = [
-    { id: 'dashboard', label: 'Ringkasan', icon: LayoutDashboard },
-    { id: 'sticky-notes', label: 'Siklus 1 (Rembug)', icon: StickyNote },
-    { id: 'surveys-new', label: 'Siklus 2 (Sensus & Peta)', icon: PlusCircle, badge: draftCount },
-    { id: 'priority', label: 'Siklus 3 (Prioritas)', icon: CheckSquare },
+    { id: 'dashboard', label: 'Ringkasan Platform', icon: LayoutDashboard },
+    { id: 'sticky-notes', label: 'Siklus 1: Rembug Warga', icon: StickyNote },
+    { id: 'surveys-new', label: 'Siklus 2: Form & Peta GIS', icon: PlusCircle, badge: draftCount },
+    { id: 'priority', label: 'Siklus 3: Prioritas USG', icon: CheckSquare },
+    { id: 'siklus-4', label: 'Siklus 4: Program & Galeri', icon: Camera },
     { id: 'logbook', label: 'Logbook Harian', icon: BookOpen },
-    { id: 'siklus-4', label: 'Siklus 4 (Program & Galeri)', icon: Activity },
-    { id: 'profile', label: 'Profil & Pengaturan', icon: User },
+    { id: 'profile', label: 'Profil KKN', icon: User },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100/70 font-sans text-slate-800 antialiased selection:bg-teal-sedang selection:text-white flex flex-col">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-[#092430] border-b border-slate-800 text-white shadow-lg">
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+      {/* Dynamic Header Navbar per Kelompok Theme Palette */}
+      <header className={`${groupConfig.headerBg} text-white sticky top-0 z-40 shadow-xl border-b border-white/10 transition-colors duration-500`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          
+          {/* Logo UIN & Group Brand */}
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-xl text-teal-200 hover:text-white hover:bg-white/10 transition cursor-pointer"
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-
             <div 
               onClick={() => setCurrentTab('dashboard')} 
-              className="flex items-center gap-3 cursor-pointer group"
+              className="flex items-center gap-2.5 cursor-pointer group"
             >
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-teal-sedang to-teal-tua p-0.5 shadow-inner">
-                <div className="w-full h-full bg-[#092430] rounded-[10px] flex items-center justify-center font-black text-teal-200 group-hover:scale-105 transition">
-                  56
-                </div>
+              <div className="bg-white/10 p-1.5 rounded-xl border border-white/20 shadow-md group-hover:scale-105 transition">
+                <img 
+                  src="/logo-uin.png" 
+                  alt="Logo UIN Sunan Gunung Djati" 
+                  className="h-7 w-auto object-contain"
+                />
               </div>
               <div>
-                <h1 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
-                  SISDAMAS <span className="bg-teal-sedang text-[#092430] text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">K56</span>
-                </h1>
-                <p className="text-[10px] text-teal-200/70 font-medium">Desa Sukahaji • Dusun 2</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-teal-200 transition">
+                    SISDAMAS SUKAHAJI
+                  </span>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${groupConfig.badgeClass}`}>
+                    KKN {userGroup}
+                  </span>
+                </div>
+                <span className="text-[10px] text-teal-100/70 font-semibold block -mt-0.5">
+                  {currentUser?.dusun || groupConfig.dusun} Desa Sukahaji
+                </span>
               </div>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
+          <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
@@ -277,16 +270,16 @@ function DashboardContent() {
                 <button
                   key={item.id}
                   onClick={() => setCurrentTab(item.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 flex items-center gap-1.5 relative cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer relative ${
                     isActive
-                      ? 'bg-teal-sedang text-white shadow-sm'
-                      : 'text-teal-100/80 hover:text-white hover:bg-white/10'
+                      ? 'bg-white text-slate-900 shadow-md'
+                      : 'text-white/80 hover:text-white hover:bg-white/15'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span>{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span className="ml-0.5 bg-[#DFB0B3] text-[#092430] text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                    <span className="ml-1 bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full">
                       {item.badge}
                     </span>
                   )}
@@ -295,23 +288,33 @@ function DashboardContent() {
             })}
           </nav>
 
-          {/* User profile corner */}
-          <div className="flex items-center gap-3">
+          {/* User Profile & Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-teal-100 hover:bg-white/10 transition cursor-pointer"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+
             {currentUser && (
               <div 
                 onClick={() => setCurrentTab('profile')} 
-                className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl cursor-pointer transition"
+                className="hidden sm:flex items-center gap-2 bg-white/10 border border-white/15 hover:bg-white/20 px-3 py-1.5 rounded-xl cursor-pointer transition shadow-xs"
               >
-                <div className="w-6 h-6 rounded-full bg-teal-sedang text-white text-[10px] font-bold flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black flex items-center justify-center shadow-xs">
                   {currentUser.name ? currentUser.name.charAt(0) : 'U'}
                 </div>
-                <span className="text-xs font-bold text-teal-100 max-w-[120px] truncate">{currentUser.name}</span>
+                <div className="text-left">
+                  <span className="text-xs font-bold text-white max-w-[110px] truncate block leading-tight">{currentUser.name}</span>
+                  <span className="text-[9px] text-amber-200/90 font-semibold block leading-tight">Kelompok {userGroup}</span>
+                </div>
               </div>
             )}
 
             <button
               onClick={handleLogout}
-              className="p-2 rounded-xl text-teal-200 hover:text-white hover:bg-red-500/20 transition cursor-pointer"
+              className="p-2 rounded-xl text-teal-100 hover:text-white hover:bg-red-500/20 transition cursor-pointer"
               title="Keluar Sesi"
             >
               <LogOut className="h-4.5 w-4.5" />
@@ -321,7 +324,7 @@ function DashboardContent() {
 
         {/* Mobile Navigation Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-white/10 bg-[#092430] px-4 py-3 space-y-1 animate-fade-in">
+          <div className="lg:hidden border-t border-white/10 bg-slate-900 px-4 py-3 space-y-1 animate-fade-in">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
@@ -334,7 +337,7 @@ function DashboardContent() {
                   }}
                   className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
                     isActive
-                      ? 'bg-teal-sedang text-white shadow-sm'
+                      ? 'bg-teal-600 text-white shadow-sm'
                       : 'text-teal-100/80 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -343,7 +346,7 @@ function DashboardContent() {
                     <span>{item.label}</span>
                   </div>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span className="bg-[#DFB0B3] text-[#092430] text-[9px] font-black px-2 py-0.5 rounded-full">
+                    <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full">
                       {item.badge} Draf
                     </span>
                   )}
@@ -392,8 +395,8 @@ function DashboardContent() {
 export default function DashboardSPA() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#092430] flex items-center justify-center text-teal-200 text-sm font-bold">
-        Memuat Platform SISDAMAS Kelompok 56...
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-teal-200 text-sm font-bold">
+        Memuat Platform Digital SISDAMAS...
       </div>
     }>
       <DashboardContent />

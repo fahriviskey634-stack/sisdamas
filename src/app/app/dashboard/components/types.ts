@@ -49,6 +49,9 @@ export interface KKNMember {
   fakultas: string;
   email: string;
   division: string;
+  group?: '55' | '56' | '57';
+  dusun?: 'Dusun 1' | 'Dusun 2' | 'Dusun 3';
+  isKetua?: boolean;
 }
 
 export interface RtTarget {
