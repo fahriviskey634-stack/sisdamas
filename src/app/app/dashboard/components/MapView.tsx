@@ -63,9 +63,21 @@ export default function MapView() {
       </div>
 
       {activeMode === 'leaflet' ? (
-        <MapComponent />
+        <MapComponent defaultMapType="hybrid" />
       ) : (
-        <div className="space-y-4 font-sans text-slate-800">
+        <div className="space-y-3 font-sans text-slate-800">
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
+            <span>💡 <strong>Catatan Google Maps Embed:</strong> Iframe Google Maps versi publik menampilkan garis batas merah wilayah desa. Untuk melihat <strong>Pin Sensus Interaktif (Data KK & Keluhan)</strong>, silakan beralih ke tombol <strong>"Peta Interaktif & Pin Sensus"</strong> di atas.</span>
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-extrabold text-xxs transition shadow-xs"
+            >
+              Buka Google Maps App ↗
+            </a>
+          </div>
+
           <div className="h-[520px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative">
             <iframe
               title="Google Maps Desa Sukahaji"

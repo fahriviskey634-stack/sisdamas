@@ -128,10 +128,10 @@ const SUKAHAJI_BOUNDS: L.LatLngBoundsExpression = [
   [-6.600, 107.500]
 ];
 
-export default function MapComponent() {
+export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMapType?: 'hybrid' | 'terrain' | 'osm' }) {
   const [pins, setPins] = useState<MapPin[]>(INITIAL_DEMO_PINS);
   const [rtFilter, setRtFilter] = useState('All');
-  const [mapType, setMapType] = useState<'hybrid' | 'terrain' | 'osm'>('hybrid');
+  const [mapType, setMapType] = useState<'hybrid' | 'terrain' | 'osm'>(defaultMapType);
   const [colorMode, setColorMode] = useState<'problem' | 'status'>('problem');
   const [boundaryData, setBoundaryData] = useState<any>(null);
 
