@@ -231,9 +231,9 @@ export default function MapComponent() {
       {/* Leaflet Map Container */}
       <div className="h-[480px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-10">
         <MapContainer
-          center={[-6.7275, 107.3789]}
-          zoom={15}
-          minZoom={12}
+          center={[-6.7260, 107.3730]}
+          zoom={14}
+          minZoom={11}
           maxZoom={20}
           maxBounds={SUKAHAJI_BOUNDS}
           maxBoundsViscosity={0.6}
