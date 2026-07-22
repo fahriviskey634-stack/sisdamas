@@ -69,7 +69,8 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
 
   try {
     const token = await getGoogleAccessToken(['https://www.googleapis.com/auth/drive']);
-    const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '');
+    const base64Data = photoBase64.replace(/^data:[^;]+;base64,/, '');
+    const binaryBuffer = Buffer.from(base64Data, 'base64');
 
     // Get or create root Dokumentasi folder inside target parent
     const rootDokumentasiFolder = await getOrCreateFolder('Dokumentasi', driveFolderId, token);
@@ -90,13 +91,15 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
       parents: [targetFolderId]
     };
 
-    const boundary = 'foo_bar_photo_boundary';
-    const header = `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
+    const boundary = `kkn56_photo_upload_${Date.now()}`;
+    const part1Header = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
+    const part2Header = `--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`;
     const footer = `\r\n--${boundary}--`;
 
     const body = Buffer.concat([
-      Buffer.from(header, 'utf8'),
-      Buffer.from(base64Data, 'utf8'),
+      Buffer.from(part1Header, 'utf8'),
+      Buffer.from(part2Header, 'utf8'),
+      binaryBuffer,
       Buffer.from(footer, 'utf8')
     ]);
 
@@ -123,7 +126,7 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': `application/json`
         },
         body: JSON.stringify({
           role: 'reader',

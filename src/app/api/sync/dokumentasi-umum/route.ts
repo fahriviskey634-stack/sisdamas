@@ -37,24 +37,27 @@ async function getOrCreateFolder(name: string, parentId: string, token: string):
 }
 
 async function uploadFileToDrive(base64Data: string, filename: string, mimeType: string, parentFolderId: string, token: string): Promise<string> {
-  const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+  const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '');
+  const binaryBuffer = Buffer.from(cleanBase64, 'base64');
   const metadata = {
     name: filename,
     mimeType,
     parents: [parentFolderId]
   };
 
-  const boundary = 'foo_bar_upload_boundary';
-  const header = `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
+  const boundary = `kkn56_dok_upload_${Date.now()}`;
+  const part1Header = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
+  const part2Header = `--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`;
   const footer = `\r\n--${boundary}--`;
 
   const body = Buffer.concat([
-    Buffer.from(header, 'utf8'),
-    Buffer.from(cleanBase64, 'utf8'),
+    Buffer.from(part1Header, 'utf8'),
+    Buffer.from(part2Header, 'utf8'),
+    binaryBuffer,
     Buffer.from(footer, 'utf8')
   ]);
 
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&supportsTeamDrives=true', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -65,14 +68,14 @@ async function uploadFileToDrive(base64Data: string, filename: string, mimeType:
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Google Drive upload failed: ${errText}`);
+    throw new Error(`Google Drive upload failed (${res.status}): ${errText}`);
   }
 
   const file = await res.json();
 
   // Set permission to anyone with link viewable
   try {
-    await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`, {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions?supportsAllDrives=true&supportsTeamDrives=true`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
