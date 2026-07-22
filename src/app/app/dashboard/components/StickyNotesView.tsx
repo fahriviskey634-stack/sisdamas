@@ -23,6 +23,13 @@ export default function StickyNotesView() {
   }, []);
 
   const fetchNotes = async () => {
+    // 1. Instant load dari cache lokal (0ms delay)
+    const local = localStorage.getItem('sukahaji_sticky_notes');
+    if (local) {
+      try { setNotes(JSON.parse(local)); } catch {}
+    }
+
+    // 2. Background revalidate dari cloud
     try {
       const res = await fetch('/api/sync/sticky-notes');
       const result = await res.json();
@@ -37,12 +44,8 @@ export default function StickyNotesView() {
           created_at: d.created_at
         })));
         localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(result.data));
-        return;
       }
     } catch {}
-
-    const local = localStorage.getItem('sukahaji_sticky_notes');
-    if (local) setNotes(JSON.parse(local));
   };
 
   const handleAddNote = async (e: React.FormEvent) => {

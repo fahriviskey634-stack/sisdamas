@@ -167,7 +167,10 @@ function DashboardContent() {
       }
     };
 
-    autoMigrateLocalStorageToCloud();
+    const timer = setTimeout(() => {
+      autoMigrateLocalStorageToCloud();
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const updateDraftCount = () => {

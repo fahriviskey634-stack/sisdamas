@@ -18,18 +18,21 @@ export default function PriorityView() {
   }, []);
 
   const fetchPriorityItems = async () => {
+    // 1. Instant load dari cache lokal (0ms delay)
+    const saved = localStorage.getItem('sukahaji_priority_items_v3');
+    if (saved) {
+      try { setItems(JSON.parse(saved)); } catch {}
+    }
+
+    // 2. Background revalidate dari cloud
     try {
       const res = await fetch('/api/sync/priority-items');
       const result = await res.json();
       if (result.success && result.data && result.data.length > 0) {
         setItems(result.data);
         localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(result.data));
-        return;
       }
     } catch {}
-
-    const saved = localStorage.getItem('sukahaji_priority_items_v3');
-    if (saved) setItems(JSON.parse(saved));
   };
 
   const syncItemsToSupabase = async (updatedItems: PriorityItem[]) => {

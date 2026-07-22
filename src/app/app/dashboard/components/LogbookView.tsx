@@ -27,6 +27,15 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
   useEffect(() => {
     if (!activeNim) return;
 
+    // 1. Instant load dari cache lokal (0ms delay)
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    if (allLogs[selectedDate]) {
+      setActivities(allLogs[selectedDate]);
+    } else {
+      setActivities([]);
+    }
+
+    // 2. Background revalidate dari cloud
     const fetchCloudLogs = async () => {
       try {
         const { data: entryData } = await supabase
@@ -45,13 +54,9 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
 
           if (actData && actData.length > 0) {
             setActivities(actData);
-            return;
           }
         }
       } catch {}
-
-      const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
-      setActivities(allLogs[selectedDate] || []);
     };
 
     fetchCloudLogs();

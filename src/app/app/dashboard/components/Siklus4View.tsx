@@ -37,38 +37,44 @@ export default function Siklus4View() {
   }, []);
 
   const fetchPriorityProblems = async () => {
+    // 1. Instant load dari cache lokal (0ms delay)
+    const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
+    if (savedProblems) {
+      try {
+        const parsed = JSON.parse(savedProblems);
+        setPriorityProblems(parsed);
+        if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
+      } catch {}
+    }
+
+    // 2. Background revalidate dari cloud
     try {
       const res = await fetch('/api/sync/priority-items');
       const result = await res.json();
       if (result.success && result.data && result.data.length > 0) {
         setPriorityProblems(result.data);
-        setNewPriority(result.data[0].problem_text);
+        if (!newPriority) setNewPriority(result.data[0].problem_text);
         localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(result.data));
-        return;
       }
     } catch {}
-
-    const savedProblems = localStorage.getItem('sukahaji_priority_items_v3');
-    if (savedProblems) {
-      const parsed = JSON.parse(savedProblems);
-      setPriorityProblems(parsed);
-      if (parsed.length > 0) setNewPriority(parsed[0].problem_text);
-    }
   };
 
   const fetchPrograms = async () => {
+    // 1. Instant load dari cache lokal (0ms delay)
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    if (savedProgs) {
+      try { setPrograms(JSON.parse(savedProgs)); } catch {}
+    }
+
+    // 2. Background revalidate dari cloud
     try {
       const res = await fetch('/api/sync/programs');
       const result = await res.json();
       if (result.success && result.data && result.data.length > 0) {
         setPrograms(result.data);
         localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
-        return;
       }
     } catch {}
-
-    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-    if (savedProgs) setPrograms(JSON.parse(savedProgs));
   };
 
   const syncProgramsToSupabase = async (updatedProgs: any[]) => {

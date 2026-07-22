@@ -13,23 +13,26 @@ export default function DokumentasiGalleryView() {
   }, []);
 
   const fetchPrograms = async () => {
+    // 1. Instant load dari cache lokal (0ms delay)
+    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    if (savedProgs) {
+      try {
+        const parsed = JSON.parse(savedProgs);
+        setPrograms(parsed);
+        if (parsed.length > 0 && !selectedProgId) setSelectedProgId(parsed[0].id);
+      } catch {}
+    }
+
+    // 2. Background revalidate dari cloud
     try {
       const res = await fetch('/api/sync/programs');
       const result = await res.json();
       if (result.success && result.data && result.data.length > 0) {
         setPrograms(result.data);
-        setSelectedProgId(result.data[0].id);
+        if (!selectedProgId) setSelectedProgId(result.data[0].id);
         localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
-        return;
       }
     } catch {}
-
-    const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
-    if (savedProgs) {
-      const parsed = JSON.parse(savedProgs);
-      setPrograms(parsed);
-      if (parsed.length > 0) setSelectedProgId(parsed[0].id);
-    }
   };
 
   const activeProg = programs.find((p: any) => p.id === selectedProgId);
