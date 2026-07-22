@@ -13,10 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KKN Sisdamas Kelompok 56 Sukahaji",
-  description: "Platform Digital KKN Sisdamas Kelompok 56 Desa Sukahaji",
+  title: "KKN Sisdamas Desa Sukahaji",
+  description: "Platform Digital KKN Sisdamas Desa Sukahaji (Kelompok 55, 56, 57)",
+  openGraph: {
+    title: "KKN Sisdamas Desa Sukahaji",
+    description: "Platform Digital KKN Sisdamas Desa Sukahaji (Kelompok 55, 56, 57)",
+    images: ["/logo-uin.png"],
+  },
   icons: {
-    icon: "/logo.jpg",
+    icon: "/logo-uin.png",
+    shortcut: "/logo-uin.png",
+    apple: "/logo-uin.png",
   },
 };
 
