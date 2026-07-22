@@ -271,11 +271,11 @@ export default function MapComponent() {
             <GeoJSON
               data={boundaryData}
               style={{
-                fillColor: '#FF6B00',
-                fillOpacity: 0.11,
-                color: '#FF6B00',
-                weight: 3,
-                dashArray: '5, 10'
+                fillColor: '#EF4444',
+                fillOpacity: 0.06,
+                color: '#DC2626',
+                weight: 2.5,
+                dashArray: '4, 6'
               }}
             />
           )}
