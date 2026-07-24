@@ -172,6 +172,16 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
 
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>(userGroup);
+
+  const filteredNotes = notes.filter((n) => {
+    if (selectedGroupFilter === 'all') return true;
+    if (selectedGroupFilter === '55') return n.rt_number?.includes('RW 06');
+    if (selectedGroupFilter === '56') return n.rt_number?.includes('RW 01') || n.rt_number?.includes('RW 05') || n.rt_number?.includes('RW 11') || !n.rt_number;
+    if (selectedGroupFilter === '57') return n.rt_number?.includes('RW 03') || n.rt_number?.includes('RW 04');
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       {/* Info Banner explaining rembug warga flow */}
@@ -258,10 +268,67 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
         </form>
       </div>
 
+      {/* Filter Tabs by Kelompok */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs font-black text-slate-700 uppercase tracking-wider">📌 Filter Tampilan Papan Sticky Note:</span>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedGroupFilter(userGroup)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+              selectedGroupFilter === userGroup
+                ? 'bg-teal-sedang text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Kelompok {userGroup} (Wilayah Saya)
+          </button>
+          <button
+            onClick={() => setSelectedGroupFilter('55')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+              selectedGroupFilter === '55'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Kelompok 55 (RW 06)
+          </button>
+          <button
+            onClick={() => setSelectedGroupFilter('56')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+              selectedGroupFilter === '56'
+                ? 'bg-teal-700 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Kelompok 56 (RW 01, 05, 11)
+          </button>
+          <button
+            onClick={() => setSelectedGroupFilter('57')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+              selectedGroupFilter === '57'
+                ? 'bg-amber-700 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Kelompok 57 (RW 03, 04)
+          </button>
+          <button
+            onClick={() => setSelectedGroupFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+              selectedGroupFilter === 'all'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Semua Kelompok ({notes.length})
+          </button>
+        </div>
+      </div>
+
       {/* Columns Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {COLUMNS.map((columnName) => {
-          const colNotes = notes.filter((n) => n.column_name === columnName);
+          const colNotes = filteredNotes.filter((n) => n.column_name === columnName);
           return (
             <div key={columnName} className="flex flex-col rounded-2xl bg-white p-4 shadow-sm border border-slate-200 min-h-[420px]">
               <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">

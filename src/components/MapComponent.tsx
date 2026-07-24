@@ -104,17 +104,14 @@ const INITIAL_DEMO_PINS: MapPin[] = [
   }
 ];
 
-// Helper to create custom colored HTML markers with pulsing glow and SVG pin icon
-const createHtmlIcon = (color: string, number: number) => {
+// Helper to create custom colored HTML markers with category icon emoji and pulse glow
+const createHtmlIcon = (color: string, number: number, iconEmoji: string = '🏠') => {
   return L.divIcon({
     html: `
       <div class="relative group cursor-pointer">
-        <div class="flex items-center justify-center h-9 w-9 rounded-full border-2 border-white shadow-xl transition-all duration-300 transform group-hover:scale-125" style="background: radial-gradient(circle, ${color} 75%, #0f172a 100%);">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          <span class="absolute -bottom-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[9px] font-black text-white bg-slate-900 border border-white shadow">
+        <div class="flex items-center justify-center h-10 w-10 rounded-full border-2 border-white shadow-2xl transition-all duration-300 transform group-hover:scale-125" style="background: radial-gradient(circle, ${color} 80%, #0f172a 100%);">
+          <span class="text-sm drop-shadow-md select-none">${iconEmoji}</span>
+          <span class="absolute -bottom-1 -right-1 flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[9px] font-black text-white bg-slate-950 border border-white shadow">
             ${number}
           </span>
         </div>
@@ -125,8 +122,8 @@ const createHtmlIcon = (color: string, number: number) => {
       </div>
     `,
     className: 'custom-leaflet-icon',
-    iconSize: [36, 36],
-    iconAnchor: [18, 18]
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
   });
 };
 
@@ -136,9 +133,25 @@ const SUKAHAJI_BOUNDS: L.LatLngBoundsExpression = [
   [-6.600, 107.500]
 ];
 
-export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMapType?: 'hybrid' | 'terrain' | 'osm' }) {
-  const [pins, setPins] = useState<MapPin[]>(INITIAL_DEMO_PINS);
+export default function MapComponent({ defaultMapType = 'hybrid', currentUser }: { defaultMapType?: 'hybrid' | 'terrain' | 'osm'; currentUser?: any }) {
+  const userGroup = currentUser?.group || 'All';
+
+  // Synchronous state initialization to eliminate 0ms glitch on deleted pins
+  const [pins, setPins] = useState<MapPin[]>(() => {
+    if (typeof window === 'undefined') return INITIAL_DEMO_PINS;
+    try {
+      const deletedIds: string[] = JSON.parse(localStorage.getItem('sukahaji_deleted_pin_ids') || '[]');
+      const editedPinsMap: Record<string, MapPin> = JSON.parse(localStorage.getItem('sukahaji_edited_pins') || '{}');
+      return INITIAL_DEMO_PINS
+        .filter(p => !deletedIds.includes(p.id))
+        .map(p => editedPinsMap[p.id] ? { ...p, ...editedPinsMap[p.id] } : p);
+    } catch {
+      return INITIAL_DEMO_PINS;
+    }
+  });
+
   const [rtFilter, setRtFilter] = useState('All');
+  const [groupFilter, setGroupFilter] = useState<string>(userGroup !== 'All' ? userGroup : 'All');
   const [mapType, setMapType] = useState<'hybrid' | 'terrain' | 'osm'>(defaultMapType);
   const [colorMode, setColorMode] = useState<'problem' | 'status'>('problem');
   const [boundaryData, setBoundaryData] = useState<any>(null);
@@ -317,9 +330,19 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
     alert('✓ Data pin berhasil diperbarui!');
   };
 
-  const filteredPins = rtFilter === 'All'
-    ? pins
-    : pins.filter(pin => pin.rt_label.includes(rtFilter));
+  // Dual filtering by RT/RW and Kelompok
+  const filteredPins = pins.filter(pin => {
+    const matchRt = rtFilter === 'All' || pin.rt_label.includes(rtFilter);
+    let matchGroup = true;
+    if (groupFilter === '55') {
+      matchGroup = pin.rt_label.includes('RW 06');
+    } else if (groupFilter === '56') {
+      matchGroup = pin.rt_label.includes('RW 01') || pin.rt_label.includes('RW 05') || pin.rt_label.includes('RW 11');
+    } else if (groupFilter === '57') {
+      matchGroup = pin.rt_label.includes('RW 03') || pin.rt_label.includes('RW 04');
+    }
+    return matchRt && matchGroup;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -344,19 +367,49 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
     }
   };
 
+  const getCategoryIcon = (problems: { category: string }[]) => {
+    if (!problems || problems.length === 0) return '🏠';
+    const firstCat = problems[0].category;
+    switch (firstCat) {
+      case 'Infrastruktur': return '🏗️';
+      case 'Kesehatan': return '🏥';
+      case 'Ekonomi': return '💰';
+      case 'Lingkungan': return '🌿';
+      case 'Pendidikan': return '🎓';
+      case 'Sosial-Budaya': return '🎭';
+      default: return '🏠';
+    }
+  };
+
   return (
     <div className="space-y-4 font-sans text-slate-800">
       {/* Map Control Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
+          {/* Kelompok Filter */}
           <div>
-            <span className="text-xs font-semibold text-slate-700 uppercase mr-2">Filter Wilayah:</span>
+            <span className="text-xs font-semibold text-slate-700 uppercase mr-2">Filter Kelompok:</span>
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              className="rounded-lg border border-teal-300 bg-teal-50 text-teal-900 px-3 py-1.5 text-xs outline-none focus:border-teal-600 transition font-bold"
+            >
+              <option value="All">Semua Kelompok (Kelompok 55, 56, 57)</option>
+              <option value="55">Kelompok 55 — Dusun 2 (RW 06)</option>
+              <option value="56">Kelompok 56 — Dusun 2 (RW 01, RW 05, RW 11)</option>
+              <option value="57">Kelompok 57 — Dusun 1 (RW 03, RW 04)</option>
+            </select>
+          </div>
+
+          {/* RT Filter */}
+          <div>
+            <span className="text-xs font-semibold text-slate-700 uppercase mr-2">Filter Wilayah RW:</span>
             <select
               value={rtFilter}
               onChange={(e) => setRtFilter(e.target.value)}
               className="rounded-lg border border-slate-300 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
             >
-              <option value="All">Semua Wilayah RT/RW Desa Sukahaji ({pins.length} Pin)</option>
+              <option value="All">Semua Wilayah RW ({filteredPins.length} Pin)</option>
               <option value="RW 01">RW 01 (Dusun 2 — Kelompok 56)</option>
               <option value="RW 03">RW 03 (Dusun 1 — Kelompok 57)</option>
               <option value="RW 04">RW 04 (Dusun 1 — Kelompok 57)</option>
@@ -391,20 +444,11 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
               <option value="status">Status Verifikasi Data</option>
             </select>
           </div>
-
-          <a
-            href="https://www.google.com/maps?cid=2054103360592180660"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-bold text-[#092430] bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
-          >
-            📍 Google Maps Desa Sukahaji ↗
-          </a>
         </div>
       </div>
 
       {/* Leaflet Map Container */}
-      <div className="h-[520px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-10">
+      <div className="h-[540px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-10">
         <MapContainer
           center={[-6.7290, 107.3650]}
           zoom={14}
@@ -416,7 +460,7 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
         >
           {mapType === 'osm' && (
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              attribution='&copy; OpenStreetMap'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               maxZoom={20}
               maxNativeZoom={19}
@@ -456,12 +500,14 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
             const pinColor = colorMode === 'status'
               ? getStatusColor(pin.survey_status)
               : getProblemColor(pin.problems);
+            
+            const iconEmoji = getCategoryIcon(pin.problems);
 
             return (
               <Marker
                 key={pin.id}
                 position={[pin.latitude, pin.longitude]}
-                icon={createHtmlIcon(pinColor, pin.problems.length)}
+                icon={createHtmlIcon(pinColor, pin.problems.length, iconEmoji)}
               >
                 <Popup className="custom-pin-popup">
                   <div className="p-2 font-sans text-slate-800 min-w-[260px] max-w-xs space-y-2">
@@ -513,23 +559,6 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
                       )}
                     </div>
 
-                    {/* Household Potentials Popup List */}
-                    {pin.potentials && pin.potentials.length > 0 && (
-                      <div className="space-y-1 pt-1 border-t border-slate-150">
-                        <span className="font-black text-emerald-700 block text-[10px] uppercase">
-                          💡 Potensi Rumah Tangga:
-                        </span>
-                        <ul className="space-y-1 max-h-20 overflow-y-auto pr-1">
-                          {pin.potentials.map((p, idx) => (
-                            <li key={idx} className="bg-emerald-50 p-1.5 rounded-md border border-emerald-200 text-xxs">
-                              <span className="font-black text-emerald-800 uppercase block text-[9px]">[{p.category}]</span>
-                              <p className="text-slate-750 font-semibold mt-0.5 leading-tight text-[10px]">{p.description}</p>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
                     {/* Action Buttons: Direct Google Maps & Edit/Delete Pin */}
                     <div className="space-y-1.5 pt-1">
                       <a
@@ -566,11 +595,11 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
           })}
         </MapContainer>
 
-        {/* Floating Map Legend Card (Collapsible on Mobile) */}
-        <div className="absolute top-3 right-3 z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-2.5 sm:p-3 rounded-xl shadow-2xl border border-white/20 max-w-[90vw] sm:max-w-2xl animate-fade-in pointer-events-auto">
+        {/* Floating Map Legend Card with Icon Emojis */}
+        <div className="absolute top-3 right-3 z-[1000] bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-white/20 max-w-[92vw] sm:max-w-2xl animate-fade-in pointer-events-auto">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block">
-              📍 Legenda Peta Tematik Sensus Desa Sukahaji
+            <span className="text-[9.5px] font-black text-amber-300 uppercase tracking-widest block flex items-center gap-1.5">
+              🗺️ Legenda Peta Tematik Sensus Desa Sukahaji
             </span>
             <button
               type="button"
@@ -581,23 +610,23 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
             </button>
           </div>
 
-          <div className={`mt-1.5 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold ${showLegendMobile ? 'block' : 'hidden sm:grid'}`}>
+          <div className={`mt-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold ${showLegendMobile ? 'block' : 'hidden sm:grid'}`}>
             {colorMode === 'status' ? (
               <>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E] shadow-sm" /> Terkunci</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6] shadow-sm" /> Terverifikasi</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EAB308] shadow-sm" /> Dikirim</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444] shadow-sm" /> Perlu Perbaikan</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E]" /> Terkunci</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6]" /> Terverifikasi</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#EAB308]" /> Dikirim</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444]" /> Perlu Perbaikan</span>
               </>
             ) : (
               <>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444] shadow-sm" /> Infrastruktur</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6] shadow-sm" /> Kesehatan</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#10B981] shadow-sm" /> Ekonomi</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B] shadow-sm" /> Lingkungan</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#8B5CF6] shadow-sm" /> Pendidikan</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#EC4899] shadow-sm" /> Sosial-Budaya</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#94A3B8] shadow-sm" /> Tanpa Masalah</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏗️</span><span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Infrastruktur</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏥</span><span className="h-2 w-2 rounded-full bg-[#3B82F6]" /> Kesehatan</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">💰</span><span className="h-2 w-2 rounded-full bg-[#10B981]" /> Ekonomi</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🌿</span><span className="h-2 w-2 rounded-full bg-[#F59E0B]" /> Lingkungan</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🎓</span><span className="h-2 w-2 rounded-full bg-[#8B5CF6]" /> Pendidikan</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🎭</span><span className="h-2 w-2 rounded-full bg-[#EC4899]" /> Sosial-Budaya</span>
+                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏠</span><span className="h-2 w-2 rounded-full bg-[#94A3B8]" /> Tanpa Masalah</span>
               </>
             )}
           </div>

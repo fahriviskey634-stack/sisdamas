@@ -186,8 +186,18 @@ export default function PriorityView({ currentUser }: { currentUser?: any }) {
     setTimeout(() => setSuccess(false), 3000);
   };
 
-  const sortedUSGItems = [...items].sort((a, b) => (a.rank || 9) - (b.rank || 9));
-  const sortedABCDItems = [...items].sort((a, b) => (a.rank_abcd || 9) - (b.rank_abcd || 9));
+  const [groupFilter, setGroupFilter] = useState<string>(userGroup);
+
+  const filteredItems = items.filter((item) => {
+    if (groupFilter === 'all') return true;
+    if (groupFilter === '55') return item.rt_label?.includes('RW 06');
+    if (groupFilter === '56') return item.rt_label?.includes('RW 01') || item.rt_label?.includes('RW 05') || item.rt_label?.includes('RW 11') || !item.rt_label;
+    if (groupFilter === '57') return item.rt_label?.includes('RW 03') || item.rt_label?.includes('RW 04');
+    return true;
+  });
+
+  const sortedUSGItems = [...filteredItems].sort((a, b) => (a.rank || 9) - (b.rank || 9));
+  const sortedABCDItems = [...filteredItems].sort((a, b) => (a.rank_abcd || 9) - (b.rank_abcd || 9));
 
   return (
     <div className="space-y-6">
@@ -202,23 +212,39 @@ export default function PriorityView({ currentUser }: { currentUser?: any }) {
               Pilihlah metode prioritas yang ingin digunakan di bawah ini untuk menilai pokok masalah desa.
             </p>
           </div>
-          <div className="flex gap-2 bg-slate-200/60 p-1 rounded-xl self-start sm:self-auto">
-            <button
-              onClick={() => setMethod('usg')}
-              className={`px-3 md:px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                method === 'usg' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Group Filter Selector */}
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs font-bold border border-teal-300 bg-white text-teal-900 rounded-xl outline-none focus:ring-1 focus:ring-teal-600 transition"
             >
-              Metode USG
-            </button>
-            <button
-              onClick={() => setMethod('abcd')}
-              className={`px-3 md:px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                method === 'abcd' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Metode ABCD (KKN)
-            </button>
+              <option value={userGroup}>Kelompok {userGroup} (Wilayah Saya)</option>
+              <option value="55">Kelompok 55 (RW 06)</option>
+              <option value="56">Kelompok 56 (RW 01, 05, 11)</option>
+              <option value="57">Kelompok 57 (RW 03, 04)</option>
+              <option value="all">Semua Kelompok ({items.length} Masalah)</option>
+            </select>
+
+            <div className="flex gap-2 bg-slate-200/60 p-1 rounded-xl">
+              <button
+                onClick={() => setMethod('usg')}
+                className={`px-3 md:px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  method === 'usg' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Metode USG
+              </button>
+              <button
+                onClick={() => setMethod('abcd')}
+                className={`px-3 md:px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  method === 'abcd' ? 'bg-white text-teal-sedang shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Metode ABCD (KKN)
+              </button>
+            </div>
           </div>
         </div>
 
