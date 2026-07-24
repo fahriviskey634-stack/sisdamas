@@ -328,13 +328,56 @@ async function buildLogbookDocx(member: typeof KKN_MEMBERS[0], entries: any[]): 
   return Buffer.from(buffer);
 }
 
+export async function generateDocxResponse(member: typeof KKN_MEMBERS[0], entries: any[]) {
+  const buffer = await buildLogbookDocx(member, entries);
+  const fileBasename = `logbook_${member.name.toLowerCase().replace(/\s+/g, '_')}`;
+
+  return new NextResponse(new Uint8Array(buffer), {
+    status: 200,
+    headers: {
+      'Content-Disposition': `attachment; filename="${fileBasename}.docx"`,
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    }
+  });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { user_id, logbookData } = body;
+
+    if (!user_id) {
+      return NextResponse.json({ error: 'user_id (NIM) wajib diisi' }, { status: 400 });
+    }
+
+    const member = KKN_MEMBERS.find(m => m.nim === user_id);
+    if (!member) {
+      return NextResponse.json({ error: 'NIM tidak terdaftar dalam daftar anggota KKN' }, { status: 404 });
+    }
+
+    let entries: any[] = [];
+
+    if (logbookData && typeof logbookData === 'object') {
+      const dates = Object.keys(logbookData).sort();
+      entries = dates.map(d => ({
+        entry_date: d,
+        logbook_activity: logbookData[d] || []
+      }));
+    }
+
+    return await generateDocxResponse(member, entries);
+  } catch (err: any) {
+    console.error('Export Logbook POST Error:', err);
+    return NextResponse.json({ error: err.message || 'Gagal mengekspor logbook' }, { status: 500 });
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('user_id');
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
-    const format = searchParams.get('format') || 'docx';
 
     if (!userId) {
       return NextResponse.json({ error: 'user_id (NIM) wajib diisi' }, { status: 400 });
@@ -354,7 +397,6 @@ export async function GET(req: NextRequest) {
           auth: { persistSession: false }
         });
         
-        // Step 1: Fetch logbook entries
         let entryQuery = supabaseServer
           .from('logbook_entry')
           .select('id, entry_date')
@@ -368,9 +410,6 @@ export async function GET(req: NextRequest) {
         if (entryError) {
           console.error('[Export Logbook] Entry query error:', entryError);
         } else if (entryData && entryData.length > 0) {
-          console.log(`[Export Logbook] Found ${entryData.length} entries for NIM ${userId}`);
-          
-          // Step 2: Fetch activities for all entry IDs
           const entryIds = entryData.map((e: any) => e.id);
           const { data: activityData, error: activityError } = await supabaseServer
             .from('logbook_activity')
@@ -380,39 +419,22 @@ export async function GET(req: NextRequest) {
 
           if (activityError) {
             console.error('[Export Logbook] Activity query error:', activityError);
-          } else {
-            console.log(`[Export Logbook] Found ${activityData?.length || 0} total activities`);
           }
 
-          // Step 3: Merge activities into entries
           entries = entryData.map((entry: any) => ({
             ...entry,
             logbook_activity: (activityData || []).filter((act: any) => act.entry_id === entry.id)
           }));
-        } else {
-          console.log(`[Export Logbook] No entries found for NIM ${userId} (date range: ${startDate || 'all'} - ${endDate || 'all'})`);
         }
       } catch (dbErr) {
         console.warn('[Export Logbook] Supabase query failed:', dbErr);
       }
     }
 
-    // No fallback to mock data — if empty, the table just shows empty message
-
-    // Build DOCX for all formats (PDF just serves the same DOCX file)
-    const buffer = await buildLogbookDocx(member, entries);
-    const fileBasename = `logbook_${member.name.toLowerCase().replace(/\s+/g, '_')}`;
-
-    return new NextResponse(new Uint8Array(buffer), {
-      status: 200,
-      headers: {
-        'Content-Disposition': `attachment; filename="${fileBasename}.docx"`,
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      }
-    });
+    return await generateDocxResponse(member, entries);
 
   } catch (err: any) {
-    console.error('Export Logbook Error:', err);
+    console.error('Export Logbook GET Error:', err);
     return NextResponse.json({ error: err.message || 'Gagal mengekspor logbook' }, { status: 500 });
   }
 }

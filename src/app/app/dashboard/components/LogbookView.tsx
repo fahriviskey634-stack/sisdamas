@@ -262,6 +262,57 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
 
   // Get sorted dates from allEntries
   const sortedDates = Object.keys(allEntries).sort();
+  const [exportingWord, setExportingWord] = useState(false);
+
+  const handleDownloadWordDocx = async () => {
+    if (!activeNim) return;
+    setExportingWord(true);
+
+    try {
+      // 1. Combine all local storage logs + current state activities
+      const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+      if (activities && activities.length > 0) {
+        allLogs[selectedDate] = activities;
+        localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
+      }
+
+      // 2. Pre-sync to Supabase in background
+      try {
+        await fetch('/api/sync/logbook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nim: activeNim, logbookData: allLogs })
+        });
+      } catch (syncErr) {
+        console.warn('Pre-export sync warning:', syncErr);
+      }
+
+      // 3. Post full logbookData to /api/export/logbook to generate DOCX directly from latest data
+      const res = await fetch('/api/export/logbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: activeNim, logbookData: allLogs })
+      });
+
+      if (!res.ok) {
+        throw new Error('Gagal mengekspor dokumen Word');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `logbook_${(activeMember?.name || 'mahasiswa').toLowerCase().replace(/\s+/g, '_')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengunduh file Word');
+    } finally {
+      setExportingWord(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -307,7 +358,7 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
           </div>
           <div className="space-y-1">
             <span className="font-black text-slate-400 uppercase">Fakultas / Divisi</span>
-            <p className="font-bold text-slate-850 text-xs truncate">
+            <p className="font-bold text-slate-855 text-xs truncate">
               {activeMember?.fakultas || '-'} / <span className="text-teal-sedang font-black">{activeMember?.division || '-'}</span>
             </p>
           </div>
@@ -554,12 +605,19 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                 >
                   Cetak Browser
                 </button>
-                <a
-                  href={`/api/export/logbook?user_id=${activeNim}&format=docx`}
-                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
+                <button
+                  onClick={handleDownloadWordDocx}
+                  disabled={exportingWord}
+                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  Unduh Word
-                </a>
+                  {exportingWord ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" /> Mengunduh...
+                    </>
+                  ) : (
+                    'Unduh Word'
+                  )}
+                </button>
                 <button
                   onClick={() => setShowPrintModal(false)}
                   className="rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xxs font-bold px-3 py-1.5 transition cursor-pointer"

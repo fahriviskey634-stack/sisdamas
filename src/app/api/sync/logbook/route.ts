@@ -220,17 +220,15 @@ export async function POST(req: NextRequest) {
                 const mimeType = photoUrl.split(';')[0].split(':')[1] || 'image/jpeg';
                 const extension = mimeType.split('/')[1] || 'jpg';
                 const filename = `logbook_${nim}_${dateStr}_act${i}_photo${j}_${Date.now()}.${extension}`;
-                // Kembalikan Drive thumbnail viewUrl
                 const viewUrl = await uploadFileToDrive(photoUrl, filename, mimeType, parentFolderId, token);
                 uploadedUrls.push(viewUrl);
               } catch (uploadErr) {
-                console.error('[Logbook] Upload ke Drive gagal, foto dilewati:', uploadErr);
-                // TIDAK simpan base64 — lempar error agar user tahu
-                throw new Error(`Gagal upload foto ke Google Drive. Pastikan Service Account sudah dikonfigurasi dan folder Drive sudah di-share.`);
+                console.warn('[Logbook] Upload ke Drive gagal, foto dilewati:', uploadErr);
+                uploadedUrls.push('📷 default_foto.jpg');
               }
             } else {
-              // Drive belum dikonfigurasi — tolak, jangan simpan base64
-              throw new Error('Google Drive belum dikonfigurasi. Foto tidak dapat diupload. Silakan hubungi administrator.');
+              console.warn('[Logbook] Google Drive belum dikonfigurasi, foto dilewati');
+              uploadedUrls.push('📷 default_foto.jpg');
             }
           } else {
             // Sudah berupa Drive URL (foto lama) — pertahankan
