@@ -121,14 +121,41 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
       satuan: 'kali',
       bukti_foto_url: photoPreviews.length > 0 ? JSON.stringify(photoPreviews) : '📷 default_foto.jpg'
     };
-    setActivities(prev => [...prev, newAct]);
+    const updated = [...activities, newAct];
+    setActivities(updated);
     setKegiatanText('');
     setOutputText('');
     setPhotoPreviews([]);
+
+    // Auto-persist immediately to localStorage for selectedDate
+    if (activeNim) {
+      const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+      allLogs[selectedDate] = updated;
+      localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
+
+      // Background sync to cloud API
+      fetch('/api/sync/logbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nim: activeNim, logbookData: allLogs })
+      }).catch(e => console.warn("Background logbook sync failed, saved locally:", e));
+    }
   };
 
   const handleRemoveRow = (id: string) => {
-    setActivities(prev => prev.filter(a => a.id !== id));
+    const updated = activities.filter(a => a.id !== id);
+    setActivities(updated);
+    if (activeNim) {
+      const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+      allLogs[selectedDate] = updated;
+      localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
+
+      fetch('/api/sync/logbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nim: activeNim, logbookData: allLogs })
+      }).catch(e => console.warn("Background logbook sync failed, saved locally:", e));
+    }
   };
 
   const handleSaveLogbook = async () => {
@@ -188,15 +215,7 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
 
     const merged: AllEntriesData = {};
 
-    // 1. Load from localStorage first
-    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
-    Object.keys(allLogs).forEach(date => {
-      if (allLogs[date] && allLogs[date].length > 0) {
-        merged[date] = allLogs[date];
-      }
-    });
-
-    // 2. Fetch from cloud (overwrites localStorage data if available)
+    // 1. Fetch from cloud first
     try {
       const { data: entries } = await supabase
         .from('logbook_entry')
@@ -218,6 +237,19 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
         }
       }
     } catch {}
+
+    // 2. Merge local storage data ON TOP (local additions/drafts for past dates take priority so they are never wiped)
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    Object.keys(allLogs).forEach(date => {
+      if (allLogs[date] && allLogs[date].length > 0) {
+        merged[date] = allLogs[date];
+      }
+    });
+
+    // 3. Guarantee currently active date activities in memory are included
+    if (activities && activities.length > 0) {
+      merged[selectedDate] = activities;
+    }
 
     setAllEntries(merged);
     setLoadingAllEntries(false);

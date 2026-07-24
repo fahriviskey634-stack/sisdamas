@@ -104,21 +104,29 @@ const INITIAL_DEMO_PINS: MapPin[] = [
   }
 ];
 
-// Helper to create custom colored HTML markers with pulsing glow
+// Helper to create custom colored HTML markers with pulsing glow and SVG pin icon
 const createHtmlIcon = (color: string, number: number) => {
   return L.divIcon({
     html: `
-      <div class="relative flex items-center justify-center h-8 w-8 rounded-full border-2 border-white shadow-md transition hover:scale-110" style="background-color: ${color}">
-        <span class="text-xxs font-black text-white">${number}</span>
-        <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+      <div class="relative group cursor-pointer">
+        <div class="flex items-center justify-center h-9 w-9 rounded-full border-2 border-white shadow-xl transition-all duration-300 transform group-hover:scale-125" style="background: radial-gradient(circle, ${color} 75%, #0f172a 100%);">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span class="absolute -bottom-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[9px] font-black text-white bg-slate-900 border border-white shadow">
+            ${number}
+          </span>
+        </div>
+        <span class="absolute -top-1 -right-1 flex h-3 w-3">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background-color: ${color}"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background-color: ${color}"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3" style="background-color: ${color}"></span>
         </span>
       </div>
     `,
     className: 'custom-leaflet-icon',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
   });
 };
 
@@ -134,6 +142,7 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
   const [mapType, setMapType] = useState<'hybrid' | 'terrain' | 'osm'>(defaultMapType);
   const [colorMode, setColorMode] = useState<'problem' | 'status'>('problem');
   const [boundaryData, setBoundaryData] = useState<any>(null);
+  const [showLegendMobile, setShowLegendMobile] = useState(false);
 
   // Fetch real GeoJSON administrative boundary
   useEffect(() => {
@@ -228,6 +237,32 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
     fetchRealMapData();
   }, []);
 
+  const handleDeletePin = async (pinId: string, kkName: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus pin sensus "${kkName}" dari peta?`)) return;
+
+    // 1. Remove from UI state
+    setPins(prev => prev.filter(p => p.id !== pinId));
+
+    // 2. Remove from localStorage draft
+    try {
+      const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+      const updatedDrafts = drafts.filter((d: any) => d.client_uuid !== pinId && `draft-map-${d.id}` !== pinId);
+      localStorage.setItem('survey_drafts', JSON.stringify(updatedDrafts));
+    } catch {}
+
+    // 3. Delete / Soft-delete from Supabase if real DB ID
+    if (pinId && !pinId.startsWith('pin-sukahaji') && !pinId.startsWith('draft-')) {
+      try {
+        await supabase
+          .from('household')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', pinId);
+      } catch (err) {
+        console.error('Gagal hapus pin dari database:', err);
+      }
+    }
+  };
+
   const filteredPins = rtFilter === 'All'
     ? pins
     : pins.filter(pin => pin.rt_label.includes(rtFilter));
@@ -267,7 +302,7 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
               onChange={(e) => setRtFilter(e.target.value)}
               className="rounded-lg border border-slate-300 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
             >
-              <option value="All">Semua Wilayah RT/RW Desa Sukahaji</option>
+              <option value="All">Semua Wilayah RT/RW Desa Sukahaji ({pins.length} Pin)</option>
               <option value="RW 01">RW 01 (Dusun 2)</option>
               <option value="RW 03">RW 03 (Dusun 1)</option>
               <option value="RW 05">RW 05 (Dusun 2)</option>
@@ -440,15 +475,25 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
                       </div>
                     )}
 
-                    {/* Direct Navigation Button to Google Maps */}
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] py-1.5 transition mt-2 shadow-sm"
-                    >
-                      🧭 Navigasi Google Maps ({pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}) ↗
-                    </a>
+                    {/* Action Buttons: Direct Google Maps & Hapus Pin */}
+                    <div className="space-y-1.5 pt-1">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] py-1.5 transition shadow-sm"
+                      >
+                        🧭 Navigasi Google Maps ({pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}) ↗
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePin(pin.id, pin.kk_name)}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-[10px] py-1.5 transition cursor-pointer shadow-xs"
+                      >
+                        🗑️ Hapus Pin Sensus Ini
+                      </button>
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -456,12 +501,22 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
           })}
         </MapContainer>
 
-        {/* Floating Map Legend Card overlaying directly on top-right of the map */}
-        <div className="absolute top-3 right-3 z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-xl shadow-2xl border border-white/20 max-w-full sm:max-w-2xl animate-fade-in pointer-events-auto">
-          <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block mb-1.5">
-            📍 Legenda Peta Tematik Sensus Desa Sukahaji
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold">
+        {/* Floating Map Legend Card (Collapsible on Mobile) */}
+        <div className="absolute top-3 right-3 z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-2.5 sm:p-3 rounded-xl shadow-2xl border border-white/20 max-w-[90vw] sm:max-w-2xl animate-fade-in pointer-events-auto">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest block">
+              📍 Legenda Peta Tematik Sensus Desa Sukahaji
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowLegendMobile(!showLegendMobile)}
+              className="sm:hidden text-[9px] font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded border border-white/20"
+            >
+              {showLegendMobile ? 'Sembunyikan' : 'Tampilkan'}
+            </button>
+          </div>
+
+          <div className={`mt-1.5 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold ${showLegendMobile ? 'block' : 'hidden sm:grid'}`}>
             {colorMode === 'status' ? (
               <>
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E] shadow-sm" /> Terkunci</span>

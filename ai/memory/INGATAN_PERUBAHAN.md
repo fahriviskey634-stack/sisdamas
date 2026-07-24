@@ -40,12 +40,16 @@
   - **Siklus 4**: Program Kerja + Galeri Foto.
 
 ### 8. Fix Logbook Bugs & Reorganisasi Wilayah Kerja 3 Kelompok (55, 56, 57)
-- **Fix Logbook Print Preview & DOCX**:
+- **Fix Logbook Print Preview, Mobile Persistence & DOCX**:
   - Tombol "Cetak LP2M" diganti menjadi **"Cetak Logbook"**.
   - Pratinjau cetak & ekspor DOCX sekarang menampilkan **SEMUA hari kegiatan** yang tersimpan (bukan hanya hari aktif).
   - Satu tombol unduh **"Unduh Word"** yang mencakup seluruh hari.
-  - Penambahan loading state saat fetch cloud agar navigasi tanggal tidak mengosongkan tabel.
+  - **Fix Bug Pengisian Hari Sebelumnya di Mobile**: Auto-save instan ke `localStorage` saat menambah/menghapus baris kegiatan agar entri tanggal lama tidak hilang saat berpindah tanggal atau mengunduh Word. Prioritas data lokal dijaga saat `fetchAllEntries`.
   - Layout cetak diperbaiki dengan `table-layout: fixed`, distribusi kolom optimal, dan posisi tanda tangan fixed (`page-break-inside: avoid`).
+- **Fitur Peta GIS & Hapus Pin Sensus**:
+  - Penambahan tombol **"🗑️ Hapus Pin Sensus Ini"** di dalam Popup setiap pin peta interaktif (penghapusan otomatis tersinkron ke state, `localStorage`, dan database Supabase).
+  - Tampilan pin diperbarui dengan desain badge radial gradients + SVG lokasi + counter keluhan.
+  - Card Legenda Peta Tematik dibuat responsif & collapsible di tampilan mobile agar tidak menutupi area peta.
 - **Reorganisasi Wilayah Kerja & Akun**:
   - **Kelompok 55**: Dusun 2 (RW 06 — 4 RT: RT 01 s/d RT 04). Ketua: Muhammad Al Afgani.
   - **Kelompok 56**: Dusun 2 (RW 01, RW 05, RW 11 — 11 RT). Ketua: Arpan Maulana.
