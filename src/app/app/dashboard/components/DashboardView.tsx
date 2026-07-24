@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, StickyNote, User, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Navigation, AlertTriangle, CheckCircle, Info, Tag } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { RtTarget } from './types';
+import { getGroupInfoText, getGroupRwList, GROUP_PALETTES } from './constants';
 
-export default function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncDrafts, rtTargets, setRtTargets }: any) {
+export default function DashboardView({ switchTab, draftCount, syncing, syncStatus, handleSyncDrafts, rtTargets, setRtTargets, currentUser }: any) {
+  const userGroup = (currentUser?.group || '56') as '55' | '56' | '57';
+  const groupInfoText = getGroupInfoText(userGroup);
+  const groupRwList = getGroupRwList(userGroup);
+  const groupConfig = GROUP_PALETTES[userGroup] || GROUP_PALETTES['56'];
   const [selectedRw, setSelectedRw] = useState('All');
   const [selectedRt, setSelectedRt] = useState('All');
   const [surveys, setSurveys] = useState<any[]>([]);
@@ -41,7 +46,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
     '57': {
       badge: 'bg-rose-950/90 border-rose-500/60 text-rose-100',
       dot: 'bg-rose-400',
-      label: 'Kelompok 57 (Dusun 3)',
+      label: 'Kelompok 57 (Dusun 1)',
       pillBg: 'bg-rose-600/40 text-rose-200 border-rose-400/50'
     },
     'semua': {
@@ -55,9 +60,9 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
   const getEventGroup = (evt: any): string => {
     if (evt.group) return evt.group;
     const summary = (evt.summary || '').toLowerCase();
-    if (summary.includes('55') || summary.includes('dusun 1')) return '55';
+    if (summary.includes('55') || summary.includes('dusun 2')) return '55';
     if (summary.includes('56') || summary.includes('dusun 2')) return '56';
-    if (summary.includes('57') || summary.includes('dusun 3')) return '57';
+    if (summary.includes('57') || summary.includes('dusun 1')) return '57';
     if (summary.includes('semua') || summary.includes('bersama')) return 'semua';
     return '56';
   };
@@ -230,7 +235,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                 <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                   <Activity className="h-5 w-5 text-teal-sedang" /> Edit Target Sensus Lapangan per RT
                 </h3>
-                <p className="text-xs text-slate-500">Sesuaikan target KK dan warga per RT Dusun 2 (Sukahaji)</p>
+                <p className="text-xs text-slate-500">Sesuaikan target KK dan warga per RT {groupConfig.dusun} (Sukahaji)</p>
               </div>
               <button 
                 onClick={() => setShowTargetEditor(false)}
@@ -303,7 +308,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                 Monitoring Progres Lapangan & Pemetaan Sukahaji
               </h2>
               <p className="text-xs md:text-sm text-teal-100/80 mt-1 max-w-2xl leading-relaxed">
-                Wilayah Kerja: Dusun 2 (3.165 Jiwa, ~1.031 KK) | RW 01, RW 05, RW 06, RW 11 Desa Sukahaji.
+                {groupInfoText}
               </p>
             </div>
             
@@ -344,11 +349,10 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                 onChange={(e) => { setSelectedRw(e.target.value); setSelectedRt('All'); }}
                 className="bg-white/10 border border-white/20 text-white text-xs rounded-xl px-3 py-1.5 outline-none font-semibold focus:bg-[#092430] cursor-pointer"
               >
-                <option value="All" className="bg-[#092430] text-white">Semua RW (Dusun 2)</option>
-                <option value="RW 01" className="bg-[#092430] text-white">RW 01</option>
-                <option value="RW 05" className="bg-[#092430] text-white">RW 05</option>
-                <option value="RW 06" className="bg-[#092430] text-white">RW 06</option>
-                <option value="RW 11" className="bg-[#092430] text-white">RW 11</option>
+                <option value="All" className="bg-[#092430] text-white">Semua RW ({groupConfig.dusun})</option>
+                {groupRwList.map((rw: string) => (
+                  <option key={rw} value={rw} className="bg-[#092430] text-white">{rw}</option>
+                ))}
               </select>
 
               {selectedRw !== 'All' && (
@@ -479,7 +483,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <Navigation className="h-4 w-4 text-teal-sedang" /> Capaian Target Sensus Dusun 2 per RT
+                <Navigation className="h-4 w-4 text-teal-sedang" /> Capaian Target Sensus {groupConfig.dusun} per RT
               </h3>
               <p className="text-xs text-slate-400">Distribusi pencapaian pendataan KK dan Warga per unit RT</p>
             </div>
@@ -594,9 +598,9 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
 
               {/* Group Color Legend Bar */}
               <div className="flex flex-wrap items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-xl p-1.5 text-[9px] font-bold text-teal-100">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> K55 (Dusun 1)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400"></span> K55 (Dusun 2)</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> K56 (Dusun 2)</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400"></span> K57 (Dusun 3)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400"></span> K57 (Dusun 1)</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Semua</span>
               </div>
 

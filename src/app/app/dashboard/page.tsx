@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LayoutDashboard, StickyNote, User, LogOut, CheckSquare, RefreshCw, AlertCircle, PlusCircle, Map, Activity, Camera, Menu, X, BookOpen } from 'lucide-react';
 
-import { DEFAULT_RT_TARGETS, GROUP_PALETTES } from './components/constants';
+import { DEFAULT_RT_TARGETS, GROUP_PALETTES, getGroupRtTargets } from './components/constants';
 import DashboardView from './components/DashboardView';
 import Siklus2View from './components/Siklus2View';
 import PriorityView from './components/PriorityView';
@@ -38,6 +38,17 @@ function DashboardContent() {
       try {
         const parsed = JSON.parse(decodeURIComponent(sessionData));
         setCurrentUser(parsed);
+        const groupRtTargets = getGroupRtTargets(parsed?.group || '56');
+        const savedTargets = localStorage.getItem(`sukahaji_rt_targets_${parsed?.group || '56'}`) || localStorage.getItem('sukahaji_rt_targets');
+        if (savedTargets) {
+          try {
+            setRtTargets(JSON.parse(savedTargets));
+          } catch {
+            setRtTargets(groupRtTargets);
+          }
+        } else {
+          setRtTargets(groupRtTargets);
+        }
       } catch (e) {
         console.error('Failed to parse session cookie', e);
       }
@@ -46,15 +57,6 @@ function DashboardContent() {
     }
 
     updateDraftCount();
-
-    const savedTargets = localStorage.getItem('sukahaji_rt_targets');
-    if (savedTargets) {
-      try {
-        setRtTargets(JSON.parse(savedTargets));
-      } catch {
-        setRtTargets(DEFAULT_RT_TARGETS);
-      }
-    }
   }, [router]);
 
   useEffect(() => {
@@ -366,6 +368,7 @@ function DashboardContent() {
             handleSyncDrafts={handleSyncDrafts}
             rtTargets={rtTargets}
             setRtTargets={setRtTargets}
+            currentUser={currentUser}
           />
         )}
         {currentTab === 'sticky-notes' && <StickyNotesView />}
@@ -375,7 +378,7 @@ function DashboardContent() {
             currentUser={currentUser} 
           />
         )}
-        {currentTab === 'priority' && <PriorityView />}
+        {currentTab === 'priority' && <PriorityView currentUser={currentUser} />}
         {currentTab === 'logbook' && <LogbookView currentUser={currentUser} />}
         {(currentTab === 'siklus-4' || currentTab === 'dokumentasi') && <Siklus4View />}
         {currentTab === 'profile' && (

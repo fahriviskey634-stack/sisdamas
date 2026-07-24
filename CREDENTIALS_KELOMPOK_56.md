@@ -2,7 +2,7 @@
 ## Desa Sukahaji (Dusun 2) — Kec. Cipeundeuy, Kab. Bandung Barat
 **Dosen Pembimbing Lapangan (DPL)**: Dr. Hj. Yani Heryani, M.Ag. (085220112497)  
 **Ketua Kelompok**: Arpan Maulana (NIM: 1231030055)  
-**Wilayah Kerja**: Dusun 2 (3.165 Jiwa, ~1.031 KK | RW 01, RW 05, RW 06, RW 11 — 15 RT)  
+**Wilayah Kerja**: Dusun 2 (RW 01, RW 05, RW 11 — 11 RT)  
 **Kata Sandi Default**: `sukahaji123` (atau `kkn56sukahaji`)
 
 ---
@@ -30,7 +30,7 @@
 ---
 
 ### 🔑 Fitur Otomatisasi Kelompok 56:
-- **Wilayah RT/RW**: Terhubung otomatis ke **Dusun 2** (RW 01, RW 05, RW 06, RW 11).
+- **Wilayah RT/RW**: Terhubung otomatis ke **Dusun 2** (RW 01, RW 05, RW 11).
 - **Tema Warna Dashboard**: **Deep Forest Teal**.
 - **Logbook Harian**: Penandatangan Pengesahan otomatis atas nama **Arpan Maulana** (Ketua Kelompok 56).
 - **Google Drive Storage**: Berkas otomatis tersimpan di folder `KKN SISDAMAS DESA SUKAHAJI / Kelompok 56 - Dusun 2`.

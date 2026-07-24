@@ -1,8 +1,8 @@
 # Daftar Akun Login & Kredensial — Kelompok 55 KKN SISDAMAS
-## Desa Sukahaji (Dusun 1) — Kec. Cipeundeuy, Kab. Bandung Barat
+## Desa Sukahaji (Dusun 2) — Kec. Cipeundeuy, Kab. Bandung Barat
 **Dosen Pembimbing Lapangan (DPL)**: Dr. Hj. Yani Heryani, M.Ag. (085220112497)  
 **Ketua Kelompok**: Muhammad Al Afgani (NIM: 1235030147)  
-**Wilayah Kerja**: Dusun 1 (2.335 Jiwa, ~760 KK | RW 02, RW 03, RW 04 — 12 RT)  
+**Wilayah Kerja**: Dusun 2 (RW 06 — 4 RT)  
 **Kata Sandi Default**: `sukahaji123` (atau `kkn55sukahaji`)
 
 ---
@@ -29,7 +29,7 @@
 ---
 
 ### 🔑 Fitur Otomatisasi Kelompok 55:
-- **Wilayah RT/RW**: Terhubung otomatis ke **Dusun 1** (RW 02, RW 03, RW 04).
+- **Wilayah RT/RW**: Terhubung otomatis ke **Dusun 2** (RW 06 — 4 RT).
 - **Tema Warna Dashboard**: **Ocean Indigo Blue**.
 - **Logbook Harian**: Penandatangan Pengesahan otomatis atas nama **Muhammad Al Afgani** (Ketua Kelompok 55).
-- **Google Drive Storage**: Berkas otomatis tersimpan di folder `KKN SISDAMAS DESA SUKAHAJI / Kelompok 55 - Dusun 1`.
+- **Google Drive Storage**: Berkas otomatis tersimpan di folder `KKN SISDAMAS DESA SUKAHAJI / Kelompok 55 - Dusun 2`.

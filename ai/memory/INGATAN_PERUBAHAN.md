@@ -39,5 +39,18 @@
   - **Siklus 2**: Form Sensus + Peta GIS.
   - **Siklus 4**: Program Kerja + Galeri Foto.
 
+### 8. Fix Logbook Bugs & Reorganisasi Wilayah Kerja 3 Kelompok (55, 56, 57)
+- **Fix Logbook Print Preview & DOCX**:
+  - Tombol "Cetak LP2M" diganti menjadi **"Cetak Logbook"**.
+  - Pratinjau cetak & ekspor DOCX sekarang menampilkan **SEMUA hari kegiatan** yang tersimpan (bukan hanya hari aktif).
+  - Satu tombol unduh **"Unduh Word"** yang mencakup seluruh hari.
+  - Penambahan loading state saat fetch cloud agar navigasi tanggal tidak mengosongkan tabel.
+  - Layout cetak diperbaiki dengan `table-layout: fixed`, distribusi kolom optimal, dan posisi tanda tangan fixed (`page-break-inside: avoid`).
+- **Reorganisasi Wilayah Kerja & Akun**:
+  - **Kelompok 55**: Dusun 2 (RW 06 — 4 RT: RT 01 s/d RT 04). Ketua: Muhammad Al Afgani.
+  - **Kelompok 56**: Dusun 2 (RW 01, RW 05, RW 11 — 11 RT). Ketua: Arpan Maulana.
+  - **Kelompok 57**: Dusun 1 (RW 03, RW 04 — 8 RT). Ketua: Hilman Farid. (Dusun 1 total 12 RT: RW 02, RW 03, RW 04).
+  - Ekspor DOCX & Sync API kini mendukung penuh seluruh 43 anggota kelompok dengan penandatanganan ketua dinamis per kelompok.
+
 ---
 **Status Deployment Production**: [https://sisdamas-kkn56.vercel.app](https://sisdamas-kkn56.vercel.app) (READY, 0 Error).

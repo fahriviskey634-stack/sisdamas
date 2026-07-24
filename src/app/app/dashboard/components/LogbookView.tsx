@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Printer } from 'lucide-react';
+import { Printer, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KKN_MEMBERS, GROUP_PALETTES } from './constants';
+
+// Type for all-entries print data
+interface AllEntriesData {
+  [date: string]: any[];
+}
 
 export default function LogbookView({ currentUser }: { currentUser: any }) {
   const [activeNim, setActiveNim] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
   const [success, setSuccess] = useState(false);
   const [rekap, setRekap] = useState<any[]>([]);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [allEntries, setAllEntries] = useState<AllEntriesData>({});
+  const [loadingAllEntries, setLoadingAllEntries] = useState(false);
 
   // Form states for new activity row
   const [kegiatanText, setKegiatanText] = useState('');
@@ -32,7 +40,9 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
     if (allLogs[selectedDate]) {
       setActivities(allLogs[selectedDate]);
     } else {
+      // Jangan langsung set [] — tunggu cloud fetch dulu
       setActivities([]);
+      setLoadingActivities(true);
     }
 
     // 2. Background revalidate dari cloud
@@ -54,9 +64,14 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
 
           if (actData && actData.length > 0) {
             setActivities(actData);
+            // Update localStorage cache
+            const logs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+            logs[selectedDate] = actData;
+            localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(logs));
           }
         }
       } catch {}
+      setLoadingActivities(false);
     };
 
     fetchCloudLogs();
@@ -166,6 +181,56 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
   const userGroup = (activeMember?.group || currentUser?.group || '56') as '55' | '56' | '57';
   const groupConfig = GROUP_PALETTES[userGroup] || GROUP_PALETTES['56'];
 
+  // Fetch ALL entries for print modal (all dates, not just selected)
+  const fetchAllEntries = async () => {
+    if (!activeNim) return;
+    setLoadingAllEntries(true);
+
+    const merged: AllEntriesData = {};
+
+    // 1. Load from localStorage first
+    const allLogs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
+    Object.keys(allLogs).forEach(date => {
+      if (allLogs[date] && allLogs[date].length > 0) {
+        merged[date] = allLogs[date];
+      }
+    });
+
+    // 2. Fetch from cloud (overwrites localStorage data if available)
+    try {
+      const { data: entries } = await supabase
+        .from('logbook_entry')
+        .select('id, entry_date')
+        .eq('nim', activeNim)
+        .order('entry_date', { ascending: true });
+
+      if (entries && entries.length > 0) {
+        for (const entry of entries) {
+          const { data: actData } = await supabase
+            .from('logbook_activity')
+            .select('*')
+            .eq('entry_id', entry.id)
+            .order('created_at', { ascending: true });
+
+          if (actData && actData.length > 0) {
+            merged[entry.entry_date] = actData;
+          }
+        }
+      }
+    } catch {}
+
+    setAllEntries(merged);
+    setLoadingAllEntries(false);
+  };
+
+  const handleOpenPrintModal = () => {
+    fetchAllEntries();
+    setShowPrintModal(true);
+  };
+
+  // Get sorted dates from allEntries
+  const sortedDates = Object.keys(allEntries).sort();
+
   return (
     <div className="space-y-6">
       {/* Header Info */}
@@ -191,10 +256,10 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
               </div>
             )}
             <button
-              onClick={() => setShowPrintModal(true)}
+              onClick={handleOpenPrintModal}
               className="flex items-center gap-2 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold px-4 py-2 cursor-pointer shadow-sm transition"
             >
-              <Printer className="h-4 w-4" /> Cetak LP2M
+              <Printer className="h-4 w-4" /> Cetak Logbook
             </button>
           </div>
         </div>
@@ -445,7 +510,7 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-150 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-              <h3 className="font-extrabold text-slate-855 text-xs uppercase tracking-wider">📄 Pratinjau Dokumen Cetak LP2M KKN</h3>
+              <h3 className="font-extrabold text-slate-855 text-xs uppercase tracking-wider">📄 Pratinjau Cetak Logbook KKN</h3>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
@@ -458,16 +523,10 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                   Cetak Browser
                 </button>
                 <a
-                  href={`/api/export/logbook?user_id=${activeNim}&start_date=${selectedDate}&end_date=${selectedDate}&format=docx`}
+                  href={`/api/export/logbook?user_id=${activeNim}&format=docx`}
                   className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
                 >
-                  Unduh Word (Hari Ini)
-                </a>
-                <a
-                  href={`/api/export/logbook?user_id=${activeNim}&format=docx`}
-                  className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xxs font-bold px-3 py-1.5 transition cursor-pointer shadow-sm text-center flex items-center justify-center"
-                >
-                  Unduh Word (Semua)
+                  Unduh Word
                 </a>
                 <button
                   onClick={() => setShowPrintModal(false)}
@@ -509,12 +568,22 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                   #print-area table {
                     border: 1px solid #000000 !important;
                     border-collapse: collapse !important;
+                    table-layout: fixed !important;
                     width: 100% !important;
                   }
                   #print-area th, #print-area td {
                     border: 1px solid #000000 !important;
-                    padding: 8px 10px !important;
+                    padding: 6px 8px !important;
                     color: #000000 !important;
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                  }
+                  #print-area tr {
+                    page-break-inside: avoid !important;
+                  }
+                  .print-signature-block {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                   }
                 }
                 #print-area {
@@ -529,10 +598,13 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
                 #print-area table {
                   border: 1px solid #000000 !important;
                   border-collapse: collapse !important;
+                  table-layout: fixed !important;
                 }
                 #print-area th, #print-area td {
                   border: 1px solid #000000 !important;
-                  padding: 8px 10px !important;
+                  padding: 6px 8px !important;
+                  word-wrap: break-word !important;
+                  overflow-wrap: break-word !important;
                 }
               `}</style>
 
@@ -555,84 +627,104 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
               </div>
 
               <div className="mt-4">
-                <table className="w-full border-collapse border border-[#000000] text-[11pt] text-[#000000]">
-                  <thead>
-                    <tr style={{ backgroundColor: '#fff2cc' }}>
-                      <th className="border border-[#000000] px-2 py-1 text-center w-12 font-bold">No</th>
-                      <th className="border border-[#000000] px-2 py-1 text-center w-28 font-bold">Tanggal</th>
-                      <th className="border border-[#000000] px-2 py-1 text-left font-bold">Kegiatan</th>
-                      <th className="border border-[#000000] px-2 py-1 text-left font-bold">Output</th>
-                      <th className="border border-[#000000] px-2 py-1 text-center w-20 font-bold">Bukti Foto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activities.map((act, idx) => {
-                      const d = new Date(selectedDate);
-                      const day = String(d.getDate()).padStart(2, '0');
-                      const month = String(d.getMonth() + 1).padStart(2, '0');
-                      const year = d.getFullYear();
-                      const dateFormatted = `${day}/${month}/${year}`;
-
-                      return (
-                        <tr key={act.id}>
-                          <td className="border border-[#000000] px-2 py-1 text-center font-bold">{idx + 1}</td>
-                          <td className="border border-[#000000] px-2 py-1 text-center">{dateFormatted}</td>
-                          <td className="border border-[#000000] px-2 py-1">{act.kegiatan}</td>
-                          <td className="border border-[#000000] px-2 py-1">{act.output}</td>
-                          <td className="border border-[#000000] px-2 py-1 text-center">
-                            {act.bukti_foto_url ? (
-                              <img
-                                src={act.bukti_foto_url}
-                                alt="Bukti"
-                                className="w-12 h-12 object-cover mx-auto block"
-                              />
-                            ) : (
-                              <span className="text-[9pt] text-slate-400">Tidak ada foto</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {activities.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="border border-[#000000] px-2 py-4 text-center italic text-[#000000]">
-                          Tidak ada data kegiatan KKN untuk tanggal ini.
-                        </td>
+                {loadingAllEntries ? (
+                  <div className="flex items-center justify-center py-12 gap-3">
+                    <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                    <span className="text-sm text-slate-500 font-semibold">Memuat semua data logbook...</span>
+                  </div>
+                ) : sortedDates.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 italic text-[11pt]">
+                    Belum ada data logbook yang tersimpan.
+                  </div>
+                ) : (
+                  <table className="w-full border-collapse border border-[#000000] text-[11pt] text-[#000000]" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '5%' }} />
+                      <col style={{ width: '14%' }} />
+                      <col style={{ width: '35%' }} />
+                      <col style={{ width: '36%' }} />
+                      <col style={{ width: '10%' }} />
+                    </colgroup>
+                    <thead>
+                      <tr style={{ backgroundColor: '#fff2cc' }}>
+                        <th className="border border-[#000000] px-2 py-1 text-center font-bold">No</th>
+                        <th className="border border-[#000000] px-2 py-1 text-center font-bold">Tanggal</th>
+                        <th className="border border-[#000000] px-2 py-1 text-left font-bold">Kegiatan</th>
+                        <th className="border border-[#000000] px-2 py-1 text-left font-bold">Output</th>
+                        <th className="border border-[#000000] px-2 py-1 text-center font-bold">Bukti Foto</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        let globalIdx = 0;
+                        return sortedDates.map(dateStr => {
+                          const dayActivities = allEntries[dateStr] || [];
+                          const d = new Date(dateStr);
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const year = d.getFullYear();
+                          const dateFormatted = `${day}/${month}/${year}`;
+
+                          return dayActivities.map((act: any) => {
+                            globalIdx++;
+                            return (
+                              <tr key={`${dateStr}-${act.id || globalIdx}`}>
+                                <td className="border border-[#000000] px-2 py-1 text-center font-bold">{globalIdx}</td>
+                                <td className="border border-[#000000] px-2 py-1 text-center">{dateFormatted}</td>
+                                <td className="border border-[#000000] px-2 py-1" style={{ wordWrap: 'break-word' }}>{act.kegiatan}</td>
+                                <td className="border border-[#000000] px-2 py-1" style={{ wordWrap: 'break-word' }}>{act.output}</td>
+                                <td className="border border-[#000000] px-2 py-1 text-center">
+                                  {act.bukti_foto_url && !act.bukti_foto_url.includes('default_foto') ? (
+                                    <img
+                                      src={(() => {
+                                        try {
+                                          if (act.bukti_foto_url.startsWith('[')) {
+                                            const urls = JSON.parse(act.bukti_foto_url);
+                                            return urls[0] || '';
+                                          }
+                                          return act.bukti_foto_url;
+                                        } catch { return act.bukti_foto_url; }
+                                      })()}
+                                      alt="Bukti"
+                                      className="w-10 h-10 object-cover mx-auto block"
+                                    />
+                                  ) : (
+                                    <span className="text-[9pt]">📷</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
-              <div className="mt-8 flex justify-between text-[11pt] text-[#000000]">
-                <div className="flex flex-col justify-between h-[110px] w-[45%]">
-                  <div>
+              {/* Tanda Tangan — fixed position, page-break-inside: avoid */}
+              <div className="print-signature-block" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <div className="mt-8 flex justify-between text-[11pt] text-[#000000]">
+                  <div style={{ width: '45%' }}>
                     <p className="m-0">Bandung Barat, ........................ 2026</p>
                     <p className="font-bold mt-1">Peserta,</p>
-                  </div>
-                  <div>
+                    <div style={{ height: '60px' }}></div>
                     <p className="font-bold m-0">{activeMember?.name}</p>
                     <p className="mt-1">NIM. {activeMember?.nim}</p>
                   </div>
-                </div>
-                <div className="flex flex-col justify-between h-[110px] w-[45%]">
-                  <div>
+                  <div style={{ width: '45%' }}>
                     <p className="m-0">&nbsp;</p>
                     <p className="font-bold mt-1">Ketua Kelompok,</p>
-                  </div>
-                  <div>
+                    <div style={{ height: '60px' }}></div>
                     <p className="font-bold m-0">{groupConfig.ketuaName}</p>
                     <p className="mt-1">NIM. {groupConfig.ketuaNim}</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-8 flex flex-col items-center justify-between text-[11pt] text-[#000000] h-[110px]">
-                <div className="text-center">
+                <div className="mt-8 text-center text-[11pt] text-[#000000]">
                   <p className="m-0">Mengetahui,</p>
                   <p className="font-bold mt-1">Dosen Pembimbing Lapangan (DPL)</p>
-                </div>
-                <div className="text-center">
+                  <div style={{ height: '60px' }}></div>
                   <p className="font-bold m-0">Dr. Hj. Yani Heryani, M.Ag.</p>
                   <p className="mt-1">NIP. 197207101998021001</p>
                 </div>

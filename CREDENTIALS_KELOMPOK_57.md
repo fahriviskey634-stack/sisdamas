@@ -1,8 +1,8 @@
 # Daftar Akun Login & Kredensial — Kelompok 57 KKN SISDAMAS
-## Desa Sukahaji (Dusun 3) — Kec. Cipeundeuy, Kab. Bandung Barat
+## Desa Sukahaji (Dusun 1) — Kec. Cipeundeuy, Kab. Bandung Barat
 **Dosen Pembimbing Lapangan (DPL)**: Dr. Hj. Yani Heryani, M.Ag. (085220112497)  
 **Ketua Kelompok**: Hilman Farid (NIM: 1232050134)  
-**Wilayah Kerja**: Dusun 3 (2.683 Jiwa, ~870 KK | RW 07, RW 08, RW 09, RW 10 — 12 RT)  
+**Wilayah Kerja**: Dusun 1 (RW 03, RW 04 — 8 RT)  
 **Kata Sandi Default**: `sukahaji123` (atau `kkn57sukahaji`)
 
 ---
@@ -29,7 +29,7 @@
 ---
 
 ### 🔑 Fitur Otomatisasi Kelompok 57:
-- **Wilayah RT/RW**: Terhubung otomatis ke **Dusun 3** (RW 07, RW 08, RW 09, RW 10).
+- **Wilayah RT/RW**: Terhubung otomatis ke **Dusun 1** (RW 03, RW 04 — 8 RT).
 - **Tema Warna Dashboard**: **Warm Coral Amber Red (Palette 57)**.
 - **Logbook Harian**: Penandatangan Pengesahan otomatis atas nama **Hilman Farid** (Ketua Kelompok 57).
-- **Google Drive Storage**: Berkas otomatis tersimpan di folder `KKN SISDAMAS DESA SUKAHAJI / Kelompok 57 - Dusun 3`.
+- **Google Drive Storage**: Berkas otomatis tersimpan di folder `KKN SISDAMAS DESA SUKAHAJI / Kelompok 57 - Dusun 1`.
