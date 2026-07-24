@@ -371,7 +371,7 @@ function DashboardContent() {
             currentUser={currentUser}
           />
         )}
-        {currentTab === 'sticky-notes' && <StickyNotesView />}
+        {currentTab === 'sticky-notes' && <StickyNotesView currentUser={currentUser} />}
         {(currentTab === 'surveys-new' || currentTab === 'map') && (
           <Siklus2View 
             updateDraftCount={updateDraftCount} 
