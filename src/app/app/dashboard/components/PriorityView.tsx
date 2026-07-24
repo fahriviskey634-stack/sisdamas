@@ -23,19 +23,29 @@ export default function PriorityView({ currentUser }: { currentUser?: any }) {
   const fetchPriorityItems = async () => {
     // 1. Instant load dari cache lokal (0ms delay)
     const saved = localStorage.getItem('sukahaji_priority_items_v3');
+    let localItems: PriorityItem[] = [];
     if (saved) {
-      try { setItems(JSON.parse(saved)); } catch {}
+      try { 
+        localItems = JSON.parse(saved);
+        setItems(localItems);
+      } catch {}
     }
 
     // 2. Background revalidate dari cloud
     try {
       const res = await fetch('/api/sync/priority-items');
       const result = await res.json();
-      if (result.success && result.data && result.data.length > 0) {
-        setItems(result.data);
-        localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(result.data));
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const itemMap = new Map<string, PriorityItem>();
+        result.data.forEach((item: PriorityItem) => itemMap.set(item.id, item));
+        localItems.forEach((item: PriorityItem) => itemMap.set(item.id, item));
+        const merged = Array.from(itemMap.values());
+        setItems(merged);
+        localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(merged));
       }
-    } catch {}
+    } catch (err) {
+      console.warn("Cloud priority items fetch failed:", err);
+    }
   };
 
   const syncItemsToSupabase = async (updatedItems: PriorityItem[]) => {
@@ -154,17 +164,26 @@ export default function PriorityView({ currentUser }: { currentUser?: any }) {
         rank: sortedUSG.findIndex((s) => s.id === item.id) + 1,
         rank_abcd: sortedABCD.findIndex((s) => s.id === item.id) + 1
       }));
-      localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(finalized));
+      syncItemsToSupabase(finalized);
       return finalized;
     });
 
     setNewProbText('');
   };
 
+  const handleDeleteProblem = (id: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus masalah prioritas ini?')) return;
+    setItems((prev) => {
+      const updated = prev.filter(item => item.id !== id);
+      syncItemsToSupabase(updated);
+      return updated;
+    });
+  };
+
   const handleSaveAll = () => {
-    localStorage.setItem('sukahaji_priority_items_v3', JSON.stringify(items));
+    syncItemsToSupabase(items);
     setSuccess(true);
-    setTimeout(() => setSuccess(false), 2000);
+    setTimeout(() => setSuccess(false), 3000);
   };
 
   const sortedUSGItems = [...items].sort((a, b) => (a.rank || 9) - (b.rank || 9));

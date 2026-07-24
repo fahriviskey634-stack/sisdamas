@@ -64,17 +64,26 @@ export default function Siklus4View() {
   const fetchPrograms = async () => {
     // 1. Instant load dari cache lokal (0ms delay)
     const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    let localProgs: any[] = [];
     if (savedProgs) {
-      try { setPrograms(JSON.parse(savedProgs)); } catch {}
+      try { 
+        localProgs = JSON.parse(savedProgs);
+        setPrograms(localProgs);
+      } catch {}
     }
 
     // 2. Background revalidate dari cloud dengan cache-busting (bebas cache mobile)
     try {
       const res = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && Array.isArray(result.data)) {
-        setPrograms(result.data);
-        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const progMap = new Map<string, any>();
+        result.data.forEach((p: any) => progMap.set(p.id, p));
+        localProgs.forEach((p: any) => progMap.set(p.id, p));
+        const merged = Array.from(progMap.values());
+
+        setPrograms(merged);
+        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(merged));
       }
     } catch {}
   };

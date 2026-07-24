@@ -26,28 +26,34 @@ export default function DokumentasiGalleryView() {
   const fetchPrograms = async () => {
     // 1. Instant load dari cache lokal (0ms delay)
     const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
+    let localProgs: any[] = [];
     if (savedProgs) {
       try {
-        const parsed = JSON.parse(savedProgs);
-        setPrograms(parsed);
-        if (parsed.length > 0 && !selectedProgId) {
-          setSelectedProgId(parsed[0].id);
-          setUploadTargetProgId(parsed[0].id);
+        localProgs = JSON.parse(savedProgs);
+        setPrograms(localProgs);
+        if (localProgs.length > 0 && !selectedProgId) {
+          setSelectedProgId(localProgs[0].id);
+          setUploadTargetProgId(localProgs[0].id);
         }
       } catch {}
     }
 
-    // 2. Background revalidate dari cloud
+    // 2. Background revalidate dari cloud (merge with local)
     try {
       const res = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && Array.isArray(result.data)) {
-        setPrograms(result.data);
-        if (result.data.length > 0) {
-          if (!selectedProgId) setSelectedProgId(result.data[0].id);
-          if (!uploadTargetProgId) setUploadTargetProgId(result.data[0].id);
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const progMap = new Map<string, any>();
+        result.data.forEach((p: any) => progMap.set(p.id, p));
+        localProgs.forEach((p: any) => progMap.set(p.id, p));
+        const merged = Array.from(progMap.values());
+
+        setPrograms(merged);
+        if (merged.length > 0) {
+          if (!selectedProgId) setSelectedProgId(merged[0].id);
+          if (!uploadTargetProgId) setUploadTargetProgId(merged[0].id);
         }
-        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(result.data));
+        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(merged));
       }
     } catch {}
   };
