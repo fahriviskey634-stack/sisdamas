@@ -143,6 +143,7 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
   const [colorMode, setColorMode] = useState<'problem' | 'status'>('problem');
   const [boundaryData, setBoundaryData] = useState<any>(null);
   const [showLegendMobile, setShowLegendMobile] = useState(false);
+  const [editingPin, setEditingPin] = useState<MapPin | null>(null);
 
   // Fetch real GeoJSON administrative boundary
   useEffect(() => {
@@ -228,9 +229,18 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
         photo_url: d.photo_url
       }));
 
+      // Load deleted IDs blacklist and edited pins map from localStorage
+      const deletedIds: string[] = JSON.parse(localStorage.getItem('sukahaji_deleted_pin_ids') || '[]');
+      const editedPinsMap: Record<string, MapPin> = JSON.parse(localStorage.getItem('sukahaji_edited_pins') || '{}');
+
       const allMerged = [...INITIAL_DEMO_PINS, ...loadedDbPins, ...draftPins];
       const uniqueMap = new Map();
-      allMerged.forEach(p => uniqueMap.set(p.id, p));
+      allMerged.forEach(p => {
+        if (!deletedIds.includes(p.id)) {
+          const finalPin = editedPinsMap[p.id] ? { ...p, ...editedPinsMap[p.id] } : p;
+          uniqueMap.set(p.id, finalPin);
+        }
+      });
       setPins(Array.from(uniqueMap.values()));
     };
 
@@ -243,14 +253,23 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
     // 1. Remove from UI state
     setPins(prev => prev.filter(p => p.id !== pinId));
 
-    // 2. Remove from localStorage draft
+    // 2. Persist deleted ID to localStorage so it NEVER reappears on refresh!
+    try {
+      const deletedIds: string[] = JSON.parse(localStorage.getItem('sukahaji_deleted_pin_ids') || '[]');
+      if (!deletedIds.includes(pinId)) {
+        deletedIds.push(pinId);
+        localStorage.setItem('sukahaji_deleted_pin_ids', JSON.stringify(deletedIds));
+      }
+    } catch {}
+
+    // 3. Remove from localStorage draft
     try {
       const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
       const updatedDrafts = drafts.filter((d: any) => d.client_uuid !== pinId && `draft-map-${d.id}` !== pinId);
       localStorage.setItem('survey_drafts', JSON.stringify(updatedDrafts));
     } catch {}
 
-    // 3. Delete / Soft-delete from Supabase if real DB ID
+    // 4. Delete / Soft-delete from Supabase if real DB ID
     if (pinId && !pinId.startsWith('pin-sukahaji') && !pinId.startsWith('draft-')) {
       try {
         await supabase
@@ -261,6 +280,41 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
         console.error('Gagal hapus pin dari database:', err);
       }
     }
+  };
+
+  const handleSaveEditPin = async () => {
+    if (!editingPin) return;
+
+    // 1. Update state
+    setPins(prev => prev.map(p => p.id === editingPin.id ? editingPin : p));
+
+    // 2. Save edit to localStorage
+    try {
+      const editedPinsMap = JSON.parse(localStorage.getItem('sukahaji_edited_pins') || '{}');
+      editedPinsMap[editingPin.id] = editingPin;
+      localStorage.setItem('sukahaji_edited_pins', JSON.stringify(editedPinsMap));
+    } catch {}
+
+    // 3. Update Supabase if real DB ID
+    if (editingPin.id && !editingPin.id.startsWith('pin-sukahaji') && !editingPin.id.startsWith('draft-')) {
+      try {
+        await supabase
+          .from('household')
+          .update({
+            kk_name: editingPin.kk_name,
+            welfare_level: editingPin.welfare_level,
+            housing_condition: editingPin.housing_condition,
+            family_size: editingPin.family_size,
+            survey_status: editingPin.survey_status
+          })
+          .eq('id', editingPin.id);
+      } catch (err) {
+        console.error('Gagal memperbarui database:', err);
+      }
+    }
+
+    setEditingPin(null);
+    alert('✓ Data pin berhasil diperbarui!');
   };
 
   const filteredPins = rtFilter === 'All'
@@ -475,7 +529,7 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
                       </div>
                     )}
 
-                    {/* Action Buttons: Direct Google Maps & Hapus Pin */}
+                    {/* Action Buttons: Direct Google Maps & Edit/Delete Pin */}
                     <div className="space-y-1.5 pt-1">
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}`}
@@ -486,13 +540,23 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
                         🧭 Navigasi Google Maps ({pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}) ↗
                       </a>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePin(pin.id, pin.kk_name)}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-[10px] py-1.5 transition cursor-pointer shadow-xs"
-                      >
-                        🗑️ Hapus Pin Sensus Ini
-                      </button>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPin({ ...pin })}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-[10px] py-1.5 transition cursor-pointer shadow-xs"
+                        >
+                          ✏️ Edit Data Pin
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePin(pin.id, pin.kk_name)}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-[10px] py-1.5 transition cursor-pointer shadow-xs"
+                        >
+                          🗑️ Hapus Pin
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </Popup>
@@ -538,6 +602,130 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
           </div>
         </div>
       </div>
+
+      {/* Edit Pin Modal Dialog */}
+      {editingPin && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
+              <h3 className="font-extrabold text-sm flex items-center gap-2">
+                ✏️ Edit Data Sensus ({editingPin.kk_name})
+              </h3>
+              <button
+                onClick={() => setEditingPin(null)}
+                className="text-slate-400 hover:text-white font-bold text-lg cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-800">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Nama Kepala Keluarga (KK):</label>
+                <input
+                  type="text"
+                  value={editingPin.kk_name}
+                  onChange={(e) => setEditingPin({ ...editingPin, kk_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Wilayah RT / RW:</label>
+                  <input
+                    type="text"
+                    value={editingPin.rt_label}
+                    onChange={(e) => setEditingPin({ ...editingPin, rt_label: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Status Verifikasi:</label>
+                  <select
+                    value={editingPin.survey_status}
+                    onChange={(e) => setEditingPin({ ...editingPin, survey_status: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold bg-white"
+                  >
+                    <option value="completed">Dikirim (Completed)</option>
+                    <option value="verified">Terverifikasi (Verified)</option>
+                    <option value="locked">Terkunci (Locked)</option>
+                    <option value="rejected">Perlu Perbaikan (Rejected)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Tingkat Kesejahteraan:</label>
+                  <select
+                    value={editingPin.welfare_level || 'Sejahtera I'}
+                    onChange={(e) => setEditingPin({ ...editingPin, welfare_level: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold bg-white"
+                  >
+                    <option value="Pra Sejahtera">Pra Sejahtera</option>
+                    <option value="Sejahtera I">Sejahtera I</option>
+                    <option value="Sejahtera II">Sejahtera II</option>
+                    <option value="Sejahtera III">Sejahtera III</option>
+                    <option value="Sejahtera III Plus">Sejahtera III Plus</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Kondisi Rumah:</label>
+                  <input
+                    type="text"
+                    value={editingPin.housing_condition || 'Layak Huni'}
+                    onChange={(e) => setEditingPin({ ...editingPin, housing_condition: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Jumlah Anggota Keluarga (Jiwa):</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={editingPin.family_size || 4}
+                    onChange={(e) => setEditingPin({ ...editingPin, family_size: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Akurasi GPS (meter):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingPin.gps_accuracy || 4.0}
+                    onChange={(e) => setEditingPin({ ...editingPin, gps_accuracy: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-teal-sedang font-semibold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingPin(null)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditPin}
+                className="px-5 py-2 bg-teal-sedang hover:bg-[#113a48] text-white font-bold rounded-xl transition cursor-pointer shadow-sm"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
