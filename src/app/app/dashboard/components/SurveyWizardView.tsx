@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { DraftSurvey } from './types';
+import { getGroupRtRwOptions, GROUP_PALETTES } from './constants';
 
 export default function SurveyWizardView({ switchTab, updateDraftCount, currentUser }: any) {
+  const userGroup = (currentUser?.group || '56') as '55' | '56' | '57';
+  const groupRtRwOptions = getGroupRtRwOptions(userGroup);
+  const groupConfig = GROUP_PALETTES[userGroup] || GROUP_PALETTES['56'];
+
   const [wStep, setWStep] = useState(1);
   const [kkName, setKkName] = useState('');
   const [kkNumber, setKkNumber] = useState('');
-  const [selectedRt, setSelectedRt] = useState('rt010101-0000-0000-0000-000000000001');
-  const [rtLabel, setRtLabel] = useState('RT 01 / RW 01 (Dusun 2)');
+  const [selectedRt, setSelectedRt] = useState(`rt-${userGroup}-1`);
+  const [rtLabel, setRtLabel] = useState(`${groupRtRwOptions[0]} (${groupConfig.dusun})`);
 
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -180,34 +185,18 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
             />
           </div>
           <div>
-            <label className="mb-1 block text-xxs font-semibold text-slate-500 uppercase">Pilih RT / RW</label>
+            <label className="mb-1 block text-xxs font-semibold text-slate-500 uppercase">Pilih RT / RW (Wilayah Kelompok {userGroup} - {groupConfig.dusun})</label>
             <select
               value={selectedRt}
               onChange={(e) => {
                 setSelectedRt(e.target.value);
                 setRtLabel(e.target.options[e.target.selectedIndex].text);
               }}
-              className="w-full rounded-lg border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs outline-none focus:border-transisi"
+              className="w-full rounded-lg border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs outline-none focus:border-transisi font-bold"
             >
-              {/* RW 01 — 4 RT */}
-              <option value="rt010101-0000-0000-0000-000000000001">RT 01 / RW 01 (Dusun 2)</option>
-              <option value="rt010102-0000-0000-0000-000000000002">RT 02 / RW 01 (Dusun 2)</option>
-              <option value="rt010103-0000-0000-0000-000000000003">RT 03 / RW 01 (Dusun 2)</option>
-              <option value="rt010104-0000-0000-0000-000000000004">RT 04 / RW 01 (Dusun 2)</option>
-              {/* RW 05 — 4 RT */}
-              <option value="rt050101-0000-0000-0000-000000000005">RT 01 / RW 05 (Dusun 2)</option>
-              <option value="rt050102-0000-0000-0000-000000000006">RT 02 / RW 05 (Dusun 2)</option>
-              <option value="rt050103-0000-0000-0000-000000000007">RT 03 / RW 05 (Dusun 2)</option>
-              <option value="rt050104-0000-0000-0000-000000000008">RT 04 / RW 05 (Dusun 2)</option>
-              {/* RW 06 — 4 RT */}
-              <option value="rt060101-0000-0000-0000-000000000009">RT 01 / RW 06 (Dusun 2)</option>
-              <option value="rt060102-0000-0000-0000-000000000010">RT 02 / RW 06 (Dusun 2)</option>
-              <option value="rt060103-0000-0000-0000-000000000011">RT 03 / RW 06 (Dusun 2)</option>
-              <option value="rt060104-0000-0000-0000-000000000012">RT 04 / RW 06 (Dusun 2)</option>
-              {/* RW 11 — 3 RT */}
-              <option value="rt110101-0000-0000-0000-000000000013">RT 01 / RW 11 (Dusun 2)</option>
-              <option value="rt110102-0000-0000-0000-000000000014">RT 02 / RW 11 (Dusun 2)</option>
-              <option value="rt110103-0000-0000-0000-000000000015">RT 03 / RW 11 (Dusun 2)</option>
+              {groupRtRwOptions.map((opt, idx) => (
+                <option key={idx} value={`rt-${userGroup}-${idx + 1}`}>{opt} ({groupConfig.dusun})</option>
+              ))}
             </select>
           </div>
           <button onClick={() => setWStep(2)} disabled={!kkName.trim()} className="rounded-lg bg-teal-sedang hover:bg-kabut text-white font-semibold px-4 py-2 text-xs flex items-center gap-1.5 ml-auto disabled:opacity-50">

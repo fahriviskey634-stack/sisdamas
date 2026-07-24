@@ -357,12 +357,13 @@ export default function MapComponent({ defaultMapType = 'hybrid' }: { defaultMap
               className="rounded-lg border border-slate-300 bg-white text-slate-900 px-3 py-1.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
             >
               <option value="All">Semua Wilayah RT/RW Desa Sukahaji ({pins.length} Pin)</option>
-              <option value="RW 01">RW 01 (Dusun 2)</option>
-              <option value="RW 03">RW 03 (Dusun 1)</option>
-              <option value="RW 05">RW 05 (Dusun 2)</option>
-              <option value="RW 06">RW 06 (Dusun 2)</option>
-              <option value="RW 08">RW 08 (Dusun 3)</option>
-              <option value="RW 11">RW 11 (Dusun 2)</option>
+              <option value="RW 01">RW 01 (Dusun 2 — Kelompok 56)</option>
+              <option value="RW 03">RW 03 (Dusun 1 — Kelompok 57)</option>
+              <option value="RW 04">RW 04 (Dusun 1 — Kelompok 57)</option>
+              <option value="RW 05">RW 05 (Dusun 2 — Kelompok 56)</option>
+              <option value="RW 06">RW 06 (Dusun 2 — Kelompok 55)</option>
+              <option value="RW 08">RW 08 (Dusun 3 — Umum)</option>
+              <option value="RW 11">RW 11 (Dusun 2 — Kelompok 56)</option>
             </select>
           </div>
           
