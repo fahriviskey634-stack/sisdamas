@@ -381,11 +381,76 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
     }
   };
 
+  const handleExportCSVForLooker = () => {
+    if (filteredPins.length === 0) return alert('Tidak ada data pin untuk diekspor.');
+
+    const headers = ['ID Pin', 'Nama KK', 'RT/RW', 'Latitude', 'Longitude', 'Akurasi GPS (m)', 'Status Verifikasi', 'Kesejahteraan', 'Kondisi Rumah', 'Anggota Keluarga', 'Masalah Utama', 'Deskripsi Masalah'];
+    const rows = filteredPins.map(p => {
+      const mainProb = p.problems?.[0] || { category: '-', description: '-' };
+      return [
+        `"${p.id}"`,
+        `"${p.kk_name.replace(/"/g, '""')}"`,
+        `"${p.rt_label}"`,
+        p.latitude,
+        p.longitude,
+        p.gps_accuracy,
+        `"${p.survey_status}"`,
+        `"${p.welfare_level || 'Sejahtera I'}"`,
+        `"${p.housing_condition || 'Layak Huni'}"`,
+        p.family_size || 4,
+        `"${mainProb.category}"`,
+        `"${mainProb.description.replace(/"/g, '""')}"`
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `gis_sukahaji_google_looker_studio_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportGeoJSON = () => {
+    if (filteredPins.length === 0) return alert('Tidak ada data pin untuk diekspor.');
+
+    const geojson = {
+      type: 'FeatureCollection',
+      features: filteredPins.map(p => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [p.longitude, p.latitude]
+        },
+        properties: {
+          id: p.id,
+          kk_name: p.kk_name,
+          rt_label: p.rt_label,
+          survey_status: p.survey_status,
+          welfare_level: p.welfare_level,
+          housing_condition: p.housing_condition,
+          family_size: p.family_size,
+          problems: p.problems
+        }
+      }))
+    };
+
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(geojson, null, 2));
+    const link = document.createElement('a');
+    link.setAttribute('href', dataStr);
+    link.setAttribute('download', `gis_sukahaji_google_earth_${Date.now()}.geojson`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4 font-sans text-slate-800">
       {/* Map Control Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Kelompok Filter */}
           <div>
             <span className="text-xs font-semibold text-slate-700 uppercase mr-2">Filter Kelompok:</span>
@@ -444,6 +509,26 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
               <option value="status">Status Verifikasi Data</option>
             </select>
           </div>
+        </div>
+
+        {/* GIS Data Export Action Buttons for Google Looker Studio & Google Earth */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportCSVForLooker}
+            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-3.5 py-2 transition shadow-sm cursor-pointer"
+            title="Ekspor CSV untuk Google Looker Studio & Excel"
+          >
+            📊 Ekspor CSV (Google Looker Studio)
+          </button>
+          <button
+            type="button"
+            onClick={handleExportGeoJSON}
+            className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-3.5 py-2 transition shadow-sm cursor-pointer"
+            title="Ekspor GeoJSON untuk Google Earth & QGIS"
+          >
+            🗺️ Ekspor GeoJSON (Google Earth)
+          </button>
         </div>
       </div>
 
@@ -595,41 +680,42 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
           })}
         </MapContainer>
 
-        {/* Floating Map Legend Card with Icon Emojis */}
-        <div className="absolute top-3 right-3 z-[1000] bg-slate-900/95 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-white/20 max-w-[92vw] sm:max-w-2xl animate-fade-in pointer-events-auto">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[9.5px] font-black text-amber-300 uppercase tracking-widest block flex items-center gap-1.5">
-              🗺️ Legenda Peta Tematik Sensus Desa Sukahaji
+        {/* Optimized Bottom-Left Collapsible Map Legend Floating Card */}
+        <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/90 text-white backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-white/20 max-w-[92vw] sm:max-w-xl transition-all duration-300 pointer-events-auto">
+          <div
+            onClick={() => setShowLegendMobile(!showLegendMobile)}
+            className="flex items-center justify-between gap-3 cursor-pointer select-none"
+          >
+            <span className="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+              🗺️ Legenda Icon Peta Tematik Desa ({filteredPins.length} Pin)
             </span>
-            <button
-              type="button"
-              onClick={() => setShowLegendMobile(!showLegendMobile)}
-              className="sm:hidden text-[9px] font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded border border-white/20"
-            >
-              {showLegendMobile ? 'Sembunyikan' : 'Tampilkan'}
-            </button>
+            <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/20 hover:bg-white/20 transition">
+              {showLegendMobile ? '▲ Sembunyikan' : '▼ Tampilkan Legenda'}
+            </span>
           </div>
 
-          <div className={`mt-2 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[9.5px] font-bold ${showLegendMobile ? 'block' : 'hidden sm:grid'}`}>
-            {colorMode === 'status' ? (
-              <>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E]" /> Terkunci</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6]" /> Terverifikasi</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#EAB308]" /> Dikirim</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444]" /> Perlu Perbaikan</span>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏗️</span><span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Infrastruktur</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏥</span><span className="h-2 w-2 rounded-full bg-[#3B82F6]" /> Kesehatan</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">💰</span><span className="h-2 w-2 rounded-full bg-[#10B981]" /> Ekonomi</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🌿</span><span className="h-2 w-2 rounded-full bg-[#F59E0B]" /> Lingkungan</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🎓</span><span className="h-2 w-2 rounded-full bg-[#8B5CF6]" /> Pendidikan</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🎭</span><span className="h-2 w-2 rounded-full bg-[#EC4899]" /> Sosial-Budaya</span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏠</span><span className="h-2 w-2 rounded-full bg-[#94A3B8]" /> Tanpa Masalah</span>
-              </>
-            )}
-          </div>
+          {showLegendMobile && (
+            <div className="mt-2.5 pt-2 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9.5px] font-bold animate-fade-in">
+              {colorMode === 'status' ? (
+                <>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#22C55E]" /> Terkunci</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#3B82F6]" /> Terverifikasi</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#EAB308]" /> Dikirim</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="h-2.5 w-2.5 rounded-full bg-[#EF4444]" /> Perlu Perbaikan</span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏗️</span><span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Infrastruktur</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏥</span><span className="h-2 w-2 rounded-full bg-[#3B82F6]" /> Kesehatan</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">💰</span><span className="h-2 w-2 rounded-full bg-[#10B981]" /> Ekonomi</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🌿</span><span className="h-2 w-2 rounded-full bg-[#F59E0B]" /> Lingkungan</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🎓</span><span className="h-2 w-2 rounded-full bg-[#8B5CF6]" /> Pendidikan</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🎭</span><span className="h-2 w-2 rounded-full bg-[#EC4899]" /> Sosial-Budaya</span>
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-lg border border-white/10"><span className="text-xs">🏠</span><span className="h-2 w-2 rounded-full bg-[#94A3B8]" /> Tanpa Masalah</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
