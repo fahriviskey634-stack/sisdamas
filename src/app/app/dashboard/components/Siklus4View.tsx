@@ -76,12 +76,40 @@ export default function Siklus4View() {
     try {
       const res = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+      if (result.success && Array.isArray(result.data)) {
         const progMap = new Map<string, any>();
-        result.data.forEach((p: any) => progMap.set(p.id, p));
-        localProgs.forEach((p: any) => progMap.set(p.id, p));
-        const merged = Array.from(progMap.values());
+        
+        // Seed map with Cloud items first
+        result.data.forEach((p: any) => {
+          if (p && p.id) progMap.set(String(p.id), p);
+        });
 
+        // Merge local items
+        localProgs.forEach((lp: any) => {
+          if (!lp || !lp.id) return;
+          const key = String(lp.id);
+          if (progMap.has(key)) {
+            const cp = progMap.get(key);
+            const photoMap = new Map<string, any>();
+            (cp.photo_urls || []).forEach((photo: any) => {
+              const u = typeof photo === 'string' ? photo : (photo.viewUrl || photo.url || photo.driveUrl);
+              if (u) photoMap.set(u, photo);
+            });
+            (lp.photo_urls || []).forEach((photo: any) => {
+              const u = typeof photo === 'string' ? photo : (photo.viewUrl || photo.url || photo.driveUrl);
+              if (u) photoMap.set(u, photo);
+            });
+            progMap.set(key, {
+              ...cp,
+              ...lp,
+              photo_urls: Array.from(photoMap.values())
+            });
+          } else {
+            progMap.set(key, lp);
+          }
+        });
+
+        const merged = Array.from(progMap.values());
         setPrograms(merged);
         localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(merged));
       }
@@ -91,11 +119,16 @@ export default function Siklus4View() {
   const syncProgramsToSupabase = async (updatedProgs: any[]) => {
     localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedProgs));
     try {
-      await fetch('/api/sync/programs', {
+      const res = await fetch('/api/sync/programs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ programs: updatedProgs })
       });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        setPrograms(data.data);
+        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(data.data));
+      }
     } catch (err) {
       console.error('Gagal sinkronisasi program ke API Cloud:', err);
     }

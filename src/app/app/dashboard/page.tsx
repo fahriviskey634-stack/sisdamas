@@ -137,13 +137,12 @@ function DashboardContent() {
 
             if (hasBase64) {
               localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedProgs));
+              await fetch('/api/sync/programs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ programs: updatedProgs })
+              });
             }
-
-            await fetch('/api/sync/programs', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ programs: updatedProgs })
-            });
           }
         }
       } catch (err) {

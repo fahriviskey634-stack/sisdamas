@@ -129,29 +129,85 @@ export async function POST(req: NextRequest) {
       console.warn("Logbook entry check warning:", e);
     }
 
-    // 2. Persist full programs array into persistent cloud store (logbook_activity)
+    let finalMerged = programs;
+
+    // 2. Fetch existing stored programs and merge with incoming programs
     if (entryId) {
+      try {
+        const { data: existingRows } = await supabase
+          .from('logbook_activity')
+          .select('output')
+          .eq('id', PERSISTENT_STORE_ID)
+          .limit(1);
+
+        if (existingRows && existingRows.length > 0 && existingRows[0].output) {
+          try {
+            const existingCloud = JSON.parse(existingRows[0].output);
+            if (Array.isArray(existingCloud) && existingCloud.length > 0) {
+              const progMap = new Map<string, any>();
+              
+              // Seed map with existing cloud programs
+              existingCloud.forEach((p: any) => {
+                if (p && p.id) progMap.set(String(p.id), p);
+              });
+
+              // Merge incoming programs
+              programs.forEach((incoming: any) => {
+                if (!incoming || !incoming.id) return;
+                const key = String(incoming.id);
+                if (progMap.has(key)) {
+                  const existing = progMap.get(key);
+                  const photoMap = new Map<string, any>();
+                  (existing.photo_urls || []).forEach((photo: any) => {
+                    const u = typeof photo === 'string' ? photo : (photo.viewUrl || photo.url || photo.driveUrl);
+                    if (u) photoMap.set(u, photo);
+                  });
+                  (incoming.photo_urls || []).forEach((photo: any) => {
+                    const u = typeof photo === 'string' ? photo : (photo.viewUrl || photo.url || photo.driveUrl);
+                    if (u) photoMap.set(u, photo);
+                  });
+
+                  progMap.set(key, {
+                    ...existing,
+                    ...incoming,
+                    photo_urls: Array.from(photoMap.values())
+                  });
+                } else {
+                  progMap.set(key, incoming);
+                }
+              });
+
+              finalMerged = Array.from(progMap.values());
+            }
+          } catch (pErr) {
+            console.warn('[API Programs POST] Existing cloud parse error:', pErr);
+          }
+        }
+      } catch (fErr) {
+        console.warn('[API Programs POST] Existing cloud fetch error:', fErr);
+      }
+
       try {
         const { error: storeErr } = await supabase.from('logbook_activity').upsert([{
           id: PERSISTENT_STORE_ID,
           entry_id: entryId,
           kegiatan: 'PROGRAM_GALLERY_STORE',
-          output: JSON.stringify(programs),
-          volume: programs.length,
+          output: JSON.stringify(finalMerged),
+          volume: finalMerged.length,
           satuan: 'Album'
         }], { onConflict: 'id' });
 
         if (storeErr) {
           console.error('[API Programs POST] Cloud store upsert error:', storeErr.message);
         } else {
-          console.log('[API Programs POST] Cloud store upsert SUCCESSFUL! Programs count:', programs.length);
+          console.log('[API Programs POST] Cloud store upsert SUCCESSFUL! Programs count:', finalMerged.length);
         }
       } catch (sErr: any) {
         console.error('[API Programs POST] Cloud store exception:', sErr.message);
       }
     }
 
-    return NextResponse.json({ success: true, data: programs });
+    return NextResponse.json({ success: true, data: finalMerged });
   } catch (err: any) {
     console.error('[API Programs POST] Exception:', err);
     return NextResponse.json({ success: true, warning: err.message, data: [] });

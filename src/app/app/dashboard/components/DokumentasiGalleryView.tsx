@@ -18,12 +18,14 @@ export default function DokumentasiGalleryView() {
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [uploadError, setUploadError] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   useEffect(() => {
     fetchPrograms();
   }, []);
 
   const fetchPrograms = async () => {
+    setIsRefreshing(true);
     // 1. Instant load dari cache lokal (0ms delay)
     const savedProgs = localStorage.getItem('sukahaji_siklus4_programs_v3');
     let localProgs: any[] = [];
@@ -38,16 +40,44 @@ export default function DokumentasiGalleryView() {
       } catch {}
     }
 
-    // 2. Background revalidate dari cloud (merge with local)
+    // 2. Background revalidate dari cloud (smart merge cloud & local)
     try {
       const res = await fetch(`/api/sync/programs?t=${Date.now()}`, { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+      if (result.success && Array.isArray(result.data)) {
         const progMap = new Map<string, any>();
-        result.data.forEach((p: any) => progMap.set(p.id, p));
-        localProgs.forEach((p: any) => progMap.set(p.id, p));
-        const merged = Array.from(progMap.values());
+        
+        // Cloud items first
+        result.data.forEach((p: any) => {
+          if (p && p.id) progMap.set(String(p.id), p);
+        });
 
+        // Merge local items so no offline items are lost
+        localProgs.forEach((lp: any) => {
+          if (!lp || !lp.id) return;
+          const key = String(lp.id);
+          if (progMap.has(key)) {
+            const cp = progMap.get(key);
+            const photoMap = new Map<string, any>();
+            (cp.photo_urls || []).forEach((photo: any) => {
+              const u = typeof photo === 'string' ? photo : (photo.viewUrl || photo.url || photo.driveUrl);
+              if (u) photoMap.set(u, photo);
+            });
+            (lp.photo_urls || []).forEach((photo: any) => {
+              const u = typeof photo === 'string' ? photo : (photo.viewUrl || photo.url || photo.driveUrl);
+              if (u) photoMap.set(u, photo);
+            });
+            progMap.set(key, {
+              ...cp,
+              ...lp,
+              photo_urls: Array.from(photoMap.values())
+            });
+          } else {
+            progMap.set(key, lp);
+          }
+        });
+
+        const merged = Array.from(progMap.values());
         setPrograms(merged);
         if (merged.length > 0) {
           if (!selectedProgId) setSelectedProgId(merged[0].id);
@@ -55,7 +85,9 @@ export default function DokumentasiGalleryView() {
         }
         localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(merged));
       }
-    } catch {}
+    } catch {} finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Filter programs based on selected group
@@ -253,11 +285,20 @@ export default function DokumentasiGalleryView() {
       setSelectedProgId(targetProgId);
       localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedPrograms));
 
-      await fetch('/api/sync/programs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ programs: updatedPrograms })
-      });
+      try {
+        const syncRes = await fetch('/api/sync/programs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ programs: updatedPrograms })
+        });
+        const syncData = await syncRes.json();
+        if (syncData.success && Array.isArray(syncData.data) && syncData.data.length > 0) {
+          setPrograms(syncData.data);
+          localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(syncData.data));
+        }
+      } catch (syncErr) {
+        console.warn('Gagal sync cloud:', syncErr);
+      }
 
       setUploadStatus(`✓ Sukses! Folder "${data.folderName || folderTitle}" berhasil dibuat di Google Drive!`);
       setTimeout(() => {
@@ -285,6 +326,16 @@ export default function DokumentasiGalleryView() {
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => fetchPrograms()}
+              disabled={isRefreshing}
+              className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-3 py-2 flex items-center gap-1.5 cursor-pointer shadow-xs transition whitespace-nowrap"
+              title="Sinkronkan galeri dengan database cloud"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
+              {isRefreshing ? 'Menyingkronkan...' : 'Refresh Sync'}
+            </button>
+
             <button
               onClick={() => {
                 setShowUploadModal(true);
