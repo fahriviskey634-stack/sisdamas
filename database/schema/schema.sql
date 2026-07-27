@@ -124,11 +124,14 @@ CREATE TABLE IF NOT EXISTS sticky_column (
 
 CREATE TABLE IF NOT EXISTS sticky_note (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    column_id UUID NOT NULL REFERENCES sticky_column(id) ON DELETE CASCADE,
+    column_id UUID REFERENCES sticky_column(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profile(id) ON DELETE SET NULL,
     rt_id UUID REFERENCES rt(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     color VARCHAR(30) NOT NULL DEFAULT 'yellow',
+    column_name VARCHAR(50) DEFAULT 'Lainnya',
+    rt_number VARCHAR(50) DEFAULT 'Umum',
+    author VARCHAR(100) DEFAULT 'Anonim',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 

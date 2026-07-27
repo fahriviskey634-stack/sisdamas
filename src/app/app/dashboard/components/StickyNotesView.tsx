@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, CheckCircle2, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Trash2, Edit3, CheckCircle2, RefreshCw, CloudOff, Cloud } from 'lucide-react';
 import { getGroupRtRwOptions, GROUP_PALETTES } from './constants';
-import { supabase } from '@/lib/supabase';
 
-const COLUMNS: ('Aspirasi' | 'Masalah' | 'Potensi' | 'Lainnya')[] = ['Aspirasi', 'Masalah', 'Potensi', 'Lainnya'];
+const COLUMNS: ('Harapan' | 'Masalah' | 'Potensi' | 'Lainnya')[] = ['Harapan', 'Masalah', 'Potensi', 'Lainnya'];
 
 const COLORS = [
   { name: 'Kuning', value: '#FEF08A', text: '#854D0E' },
@@ -12,6 +11,8 @@ const COLORS = [
   { name: 'Merah', value: '#FECDD3', text: '#9F1239' },
 ];
 
+const LOCAL_STORAGE_KEY = 'sukahaji_sticky_notes';
+
 export default function StickyNotesView({ currentUser }: { currentUser?: any }) {
   const userGroup = (currentUser?.group || '56') as '55' | '56' | '57';
   const rtRwOptions = getGroupRtRwOptions(userGroup);
@@ -19,13 +20,14 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
 
   const [notes, setNotes] = useState<any[]>([]);
   const [newContent, setNewContent] = useState('');
-  const [selectedColumn, setSelectedColumn] = useState<'Aspirasi' | 'Masalah' | 'Potensi' | 'Lainnya'>('Aspirasi');
+  const [selectedColumn, setSelectedColumn] = useState<'Harapan' | 'Masalah' | 'Potensi' | 'Lainnya'>('Harapan');
   const [selectedColor, setSelectedColor] = useState('#FEF08A');
   const [rtNumber, setRtNumber] = useState(rtRwOptions[0] || 'RT 01 / RW 01');
   const [authorName, setAuthorName] = useState(currentUser?.name || 'Anonim');
   const [saving, setSaving] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [editingNote, setEditingNote] = useState<any | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('syncing');
 
   useEffect(() => {
     if (currentUser?.name) {
@@ -37,25 +39,48 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     fetchNotes();
   }, []);
 
+  // Helper: save notes to localStorage as cache
+  const saveToLocalCache = useCallback((notesData: any[]) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notesData));
+    } catch {}
+  }, []);
+
+  // Helper: load notes from localStorage cache
+  const loadFromLocalCache = useCallback((): any[] => {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+  }, []);
+
+  // Helper: migrate old "Aspirasi" notes to "Harapan" in local cache
+  const migrateLocalNotes = useCallback((notesData: any[]): any[] => {
+    return notesData.map(n => ({
+      ...n,
+      column_name: n.column_name === 'Aspirasi' ? 'Harapan' : n.column_name
+    }));
+  }, []);
+
   const fetchNotes = async () => {
-    // 1. Instant load dari cache lokal (0ms delay)
-    const local = localStorage.getItem('sukahaji_sticky_notes');
-    let localNotes: any[] = [];
-    if (local) {
-      try { 
-        localNotes = JSON.parse(local);
-        setNotes(localNotes);
-      } catch {}
+    setSyncStatus('syncing');
+
+    // 1. Instant load dari local cache (0ms delay) — hanya sebagai placeholder saat loading
+    const localNotes = migrateLocalNotes(loadFromLocalCache());
+    if (localNotes.length > 0) {
+      setNotes(localNotes);
     }
 
-    // 2. Background revalidate dari cloud (merge with local)
+    // 2. Fetch dari CLOUD sebagai Source of Truth
     try {
-      const res = await fetch('/api/sync/sticky-notes');
+      const res = await fetch('/api/sync/sticky-notes', { cache: 'no-store' });
       const result = await res.json();
-      if (result.success && result.data && result.data.length > 0) {
-        const cloudNotes = result.data.map((d: any) => ({
+
+      if (result.success) {
+        const cloudNotes = (result.data || []).map((d: any) => ({
           id: d.id,
-          column_name: d.column_name || 'Lainnya',
+          column_name: (d.column_name === 'Aspirasi' ? 'Harapan' : d.column_name) || 'Lainnya',
           content: d.content,
           color: d.color || '#FEF08A',
           rt_number: d.rt_number || 'Umum',
@@ -63,17 +88,18 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
           created_at: d.created_at
         }));
 
-        // Merge: combination of local and cloud notes without duplicates
-        const noteMap = new Map();
-        cloudNotes.forEach((n: any) => noteMap.set(n.id, n));
-        localNotes.forEach((n: any) => noteMap.set(n.id, n));
-        const merged = Array.from(noteMap.values());
-
-        setNotes(merged);
-        localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(merged));
+        // CLOUD = final state — cloud data selalu menang, hapus local cache lama
+        setNotes(cloudNotes);
+        saveToLocalCache(cloudNotes);
+        setSyncStatus('synced');
+      } else {
+        // Cloud error tapi response parseable — tetap pakai local
+        setSyncStatus('offline');
       }
     } catch (err) {
-      console.warn("Cloud sticky notes fetch failed, using local cache:", err);
+      console.warn('Cloud sticky notes fetch failed, using local cache:', err);
+      setSyncStatus('offline');
+
     }
   };
 
@@ -96,13 +122,13 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     // 1. Save to state & localStorage IMMEDIATELY so it never vanishes on refresh
     const updatedNotes = [...notes, newNote];
     setNotes(updatedNotes);
-    localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(updatedNotes));
+    saveToLocalCache(updatedNotes);
 
     setNewContent('');
     setFeedbackMsg('✓ Catatan berhasil ditambahkan!');
     setTimeout(() => setFeedbackMsg(''), 3000);
 
-    // 2. Sync to Supabase in background
+    // 2. Sync to cloud in background
     try {
       const res = await fetch('/api/sync/sticky-notes', {
         method: 'POST',
@@ -114,13 +140,19 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
         const savedCloudNote = result.data[0];
         // Replace tempId with real DB ID
         setNotes((prev) => {
-          const replaced = prev.map(n => n.id === tempId ? { ...n, id: savedCloudNote.id } : n);
-          localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(replaced));
+          const replaced = prev.map(n => n.id === tempId ? {
+            ...n,
+            id: savedCloudNote.id,
+            created_at: savedCloudNote.created_at || n.created_at
+          } : n);
+          saveToLocalCache(replaced);
           return replaced;
         });
+        setSyncStatus('synced');
       }
     } catch (err) {
-      console.warn("Background sticky note sync failed, saved locally:", err);
+      console.warn('Background sticky note sync failed, saved locally:', err);
+      setSyncStatus('offline');
     } finally {
       setSaving(false);
     }
@@ -132,14 +164,14 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     // 1. Update UI state & localStorage immediately
     const updated = notes.filter(n => n.id !== noteId);
     setNotes(updated);
-    localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(updated));
+    saveToLocalCache(updated);
 
-    // 2. Delete from Supabase if real DB record
+    // 2. Delete from cloud if real DB record (via API route)
     if (noteId && !noteId.startsWith('local-note-')) {
       try {
-        await supabase.from('sticky_note').delete().eq('id', noteId);
+        await fetch(`/api/sync/sticky-notes?id=${noteId}`, { method: 'DELETE' });
       } catch (err) {
-        console.error('Failed to delete note from Supabase:', err);
+        console.error('Failed to delete note from cloud:', err);
       }
     }
   };
@@ -149,21 +181,24 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
 
     const updated = notes.map(n => n.id === editingNote.id ? editingNote : n);
     setNotes(updated);
-    localStorage.setItem('sukahaji_sticky_notes', JSON.stringify(updated));
+    saveToLocalCache(updated);
 
+    // Sync edit to cloud via API route (not direct Supabase)
     if (editingNote.id && !editingNote.id.startsWith('local-note-')) {
       try {
-        await supabase
-          .from('sticky_note')
-          .update({
+        await fetch('/api/sync/sticky-notes', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingNote.id,
             content: editingNote.content,
             column_name: editingNote.column_name,
             color: editingNote.color,
             rt_number: editingNote.rt_number
           })
-          .eq('id', editingNote.id);
+        });
       } catch (err) {
-        console.error('Failed to update note in Supabase:', err);
+        console.error('Failed to update note in cloud:', err);
       }
     }
 
@@ -188,14 +223,33 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-900 text-xs leading-relaxed flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
         <div>
           <strong className="block text-amber-950 text-sm mb-0.5">📢 Instrumen Digitalisasi Rembug Warga (Siklus 1) — Kelompok {userGroup} ({groupConfig.dusun})</strong>
-          Dokumentasikan aspirasi, potensi, dan keluhan warga dari rembug desa. Data otomatis tersimpan secara aman di browser & cloud database.
+          Dokumentasikan harapan, potensi, dan keluhan warga dari rembug desa. Data otomatis tersimpan secara aman di browser &amp; cloud database.
         </div>
 
-        {feedbackMsg && (
-          <span className="shrink-0 px-3 py-1.5 bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-sm animate-pulse flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4" /> {feedbackMsg}
-          </span>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Sync status indicator */}
+          {syncStatus === 'synced' && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-lg">
+              <Cloud className="h-3 w-3" /> Tersinkron
+            </span>
+          )}
+          {syncStatus === 'syncing' && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-lg">
+              <RefreshCw className="h-3 w-3 animate-spin" /> Menyinkronkan...
+            </span>
+          )}
+          {syncStatus === 'offline' && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-lg">
+              <CloudOff className="h-3 w-3" /> Offline (Cache)
+            </span>
+          )}
+
+          {feedbackMsg && (
+            <span className="px-3 py-1.5 bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-sm animate-pulse flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" /> {feedbackMsg}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Input Form Card */}
@@ -203,12 +257,12 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">➕ Tambah Catatan Rembug Warga</h3>
         <form onSubmit={handleAddNote} className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="md:col-span-2 space-y-1">
-            <label className="block text-xxs font-bold text-slate-500 uppercase">Isi Catatan / Aspirasi / Keluhan</label>
+            <label className="block text-xxs font-bold text-slate-500 uppercase">Isi Catatan / Harapan / Keluhan</label>
             <input
               type="text"
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
-              placeholder="Masukkan aspirasi/keluhan warga..."
+              placeholder="Masukkan harapan/keluhan warga..."
               className="w-full rounded-xl border border-slate-300 text-slate-900 bg-white px-4 py-2 text-xs outline-none focus:border-teal-sedang transition font-medium"
             />
           </div>
@@ -345,6 +399,13 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
                     style={{ backgroundColor: note.color }}
                     className="group relative rounded-xl p-3.5 shadow-sm border border-slate-900/10 transition hover:shadow-md"
                   >
+                    {/* Pending sync indicator */}
+                    {typeof note.id === 'string' && note.id.startsWith('local-note-') && (
+                      <span className="absolute top-1.5 left-2 text-[8px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md">
+                        ⏳ Belum tersinkron
+                      </span>
+                    )}
+
                     {/* Delete & Edit Buttons */}
                     <div className="absolute top-2 right-2 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
                       <button
@@ -365,7 +426,7 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
                       </button>
                     </div>
 
-                    <p className="text-xs font-semibold text-slate-850 pr-10 leading-relaxed font-sans">{note.content}</p>
+                    <p className={`text-xs font-semibold text-slate-850 pr-10 leading-relaxed font-sans ${typeof note.id === 'string' && note.id.startsWith('local-note-') ? 'mt-4' : ''}`}>{note.content}</p>
 
                     <div className="mt-3 flex items-center justify-between text-[9.5px] text-slate-600 border-t border-black/10 pt-2">
                       <span className="font-extrabold">📍 {note.rt_number}</span>
