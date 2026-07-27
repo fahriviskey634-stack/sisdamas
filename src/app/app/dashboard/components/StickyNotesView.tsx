@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Edit3, CheckCircle2, RefreshCw, CloudOff, Cloud } from 'lucide-react';
-import { getGroupRtRwOptions, GROUP_PALETTES } from './constants';
+import { GROUP_PALETTES } from './constants';
 
 const COLUMNS: ('Harapan' | 'Masalah' | 'Potensi' | 'Lainnya')[] = ['Harapan', 'Masalah', 'Potensi', 'Lainnya'];
 
@@ -15,14 +15,12 @@ const LOCAL_STORAGE_KEY = 'sukahaji_sticky_notes';
 
 export default function StickyNotesView({ currentUser }: { currentUser?: any }) {
   const userGroup = (currentUser?.group || '56') as '55' | '56' | '57';
-  const rtRwOptions = getGroupRtRwOptions(userGroup);
   const groupConfig = GROUP_PALETTES[userGroup] || GROUP_PALETTES['56'];
 
   const [notes, setNotes] = useState<any[]>([]);
   const [newContent, setNewContent] = useState('');
   const [selectedColumn, setSelectedColumn] = useState<'Harapan' | 'Masalah' | 'Potensi' | 'Lainnya'>('Harapan');
   const [selectedColor, setSelectedColor] = useState('#FEF08A');
-  const [rtNumber, setRtNumber] = useState(rtRwOptions[0] || 'RT 01 / RW 01');
   const [authorName, setAuthorName] = useState(currentUser?.name || 'Anonim');
   const [saving, setSaving] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -114,7 +112,7 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
       column_name: selectedColumn,
       content: newContent.trim(),
       color: selectedColor,
-      rt_number: rtNumber,
+      rt_number: 'Dusun 2 (RW 01, 05, 11)',
       author: authorName || currentUser?.name || 'Anonim',
       created_at: new Date().toISOString()
     };
@@ -207,15 +205,8 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
 
-  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>(userGroup);
-
-  const filteredNotes = notes.filter((n) => {
-    if (selectedGroupFilter === 'all') return true;
-    if (selectedGroupFilter === '55') return n.rt_number?.includes('RW 06');
-    if (selectedGroupFilter === '56') return n.rt_number?.includes('RW 01') || n.rt_number?.includes('RW 05') || n.rt_number?.includes('RW 11') || !n.rt_number;
-    if (selectedGroupFilter === '57') return n.rt_number?.includes('RW 03') || n.rt_number?.includes('RW 04');
-    return true;
-  });
+  // Tampilkan semua notes tanpa filter wilayah (Siklus 1 = Dusun 2 saja)
+  const filteredNotes = notes;
 
   return (
     <div className="space-y-6">
@@ -255,7 +246,7 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
       {/* Input Form Card */}
       <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200 space-y-4">
         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">➕ Tambah Catatan Rembug Warga</h3>
-        <form onSubmit={handleAddNote} className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <form onSubmit={handleAddNote} className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="md:col-span-2 space-y-1">
             <label className="block text-xxs font-bold text-slate-500 uppercase">Isi Catatan / Harapan / Keluhan</label>
             <input
@@ -280,20 +271,8 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-xxs font-bold text-slate-500 uppercase">Wilayah RT / RW ({groupConfig.dusun})</label>
-            <select
-              value={rtNumber}
-              onChange={(e) => setRtNumber(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs outline-none focus:border-teal-sedang transition font-bold"
-            >
-              {rtRwOptions.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 md:col-span-4 pt-2 border-t border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3 md:col-span-3 pt-2 border-t border-slate-100">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xxs font-bold text-slate-500 uppercase">Warna Note:</span>
               <div className="flex flex-wrap gap-2">
@@ -322,61 +301,12 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
         </form>
       </div>
 
-      {/* Filter Tabs by Kelompok */}
+      {/* Info wilayah Kelompok 56 */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs font-black text-slate-700 uppercase tracking-wider">📌 Filter Tampilan Papan Sticky Note:</span>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedGroupFilter(userGroup)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-              selectedGroupFilter === userGroup
-                ? 'bg-teal-sedang text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Kelompok {userGroup} (Wilayah Saya)
-          </button>
-          <button
-            onClick={() => setSelectedGroupFilter('55')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-              selectedGroupFilter === '55'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Kelompok 55 (RW 06)
-          </button>
-          <button
-            onClick={() => setSelectedGroupFilter('56')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-              selectedGroupFilter === '56'
-                ? 'bg-teal-700 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Kelompok 56 (RW 01, 05, 11)
-          </button>
-          <button
-            onClick={() => setSelectedGroupFilter('57')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-              selectedGroupFilter === '57'
-                ? 'bg-amber-700 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Kelompok 57 (RW 03, 04)
-          </button>
-          <button
-            onClick={() => setSelectedGroupFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-              selectedGroupFilter === 'all'
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Semua Kelompok ({notes.length})
-          </button>
-        </div>
+        <span className="text-xs font-black text-slate-700 uppercase tracking-wider">📌 Papan Sticky Note — Kelompok {userGroup} ({groupConfig.dusun}) • Wilayah RW 01, 05, 11</span>
+        <span className="text-xs font-extrabold text-teal-tua bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200">
+          Total: {notes.length} catatan
+        </span>
       </div>
 
       {/* Columns Grid */}
@@ -428,8 +358,7 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
 
                     <p className={`text-xs font-semibold text-slate-850 pr-10 leading-relaxed font-sans ${typeof note.id === 'string' && note.id.startsWith('local-note-') ? 'mt-4' : ''}`}>{note.content}</p>
 
-                    <div className="mt-3 flex items-center justify-between text-[9.5px] text-slate-600 border-t border-black/10 pt-2">
-                      <span className="font-extrabold">📍 {note.rt_number}</span>
+                    <div className="mt-3 flex items-center justify-end text-[9.5px] text-slate-600 border-t border-black/10 pt-2">
                       <span className="font-bold">Oleh: {note.author || 'Anonim'}</span>
                     </div>
                   </div>
@@ -473,32 +402,17 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Kategori Kolom:</label>
-                  <select
-                    value={editingNote.column_name}
-                    onChange={(e) => setEditingNote({ ...editingNote, column_name: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-1 focus:ring-teal-sedang font-bold bg-white"
-                  >
-                    {COLUMNS.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Wilayah RT/RW:</label>
-                  <select
-                    value={editingNote.rt_number}
-                    onChange={(e) => setEditingNote({ ...editingNote, rt_number: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-1 focus:ring-teal-sedang font-bold bg-white"
-                  >
-                    {rtRwOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Kategori Kolom:</label>
+                <select
+                  value={editingNote.column_name}
+                  onChange={(e) => setEditingNote({ ...editingNote, column_name: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-1 focus:ring-teal-sedang font-bold bg-white"
+                >
+                  {COLUMNS.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-1">
