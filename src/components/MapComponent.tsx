@@ -478,7 +478,7 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
               attribution='&copy; Google Satellite Maps'
               url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
               maxZoom={20}
-              maxNativeZoom={18}
+              maxNativeZoom={20}
             />
           )}
           {mapType === 'terrain' && (
@@ -566,16 +566,26 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
                       )}
                     </div>
 
-                    {/* Action Buttons: Direct Google Maps & Edit/Delete Pin */}
+                    {/* Action Buttons: Direct Google Maps, Street View & Edit/Delete Pin */}
                     <div className="space-y-1.5 pt-1">
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] py-1.5 transition shadow-sm"
-                      >
-                        🧭 Navigasi Google Maps ({pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}) ↗
-                      </a>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-[9.5px] py-1.5 transition shadow-sm text-center"
+                        >
+                          🧭 Google Maps ↗
+                        </a>
+                        <a
+                          href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${pin.latitude},${pin.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[9.5px] py-1.5 transition shadow-sm text-center"
+                        >
+                          📷 Street View 360° ↗
+                        </a>
+                      </div>
 
                       <div className="flex gap-1.5">
                         <button
