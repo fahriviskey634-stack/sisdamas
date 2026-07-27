@@ -140,9 +140,41 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
     fetchSurveys();
   }, []);
 
-  const fetchSurveys = () => {
+  const fetchSurveys = async () => {
     const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
-    setSurveys(drafts);
+    let dbSurveys: any[] = [];
+    try {
+      const { data } = await supabase
+        .from('household')
+        .select(`
+          id,
+          rt (rt_number, rw (rw_number)),
+          survey (
+            id,
+            family_size,
+            problem (id, category, description),
+            potential (id, category, description)
+          )
+        `)
+        .is('deleted_at', null);
+
+      if (data) {
+        dbSurveys = data.map((h: any) => {
+          const surv = h.survey?.[0];
+          const rtName = h.rt?.rt_number || '';
+          const rwName = h.rt?.rw?.rw_number || '';
+          return {
+            id: h.id,
+            family_size: surv?.family_size || 0,
+            rt_label: `${rwName} / ${rtName}`,
+            problems: surv?.problem || [],
+            potentials: surv?.potential || []
+          };
+        });
+      }
+    } catch {}
+
+    setSurveys([...dbSurveys, ...drafts]);
   };
 
   // Filter surveys by RW/RT

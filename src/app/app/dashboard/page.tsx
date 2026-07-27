@@ -70,18 +70,7 @@ function DashboardContent() {
   useEffect(() => {
     const autoMigrateLocalStorageToCloud = async () => {
       try {
-        // 1. Backup Siklus 1 (sticky_note)
-        const localNotes = localStorage.getItem('sukahaji_sticky_notes');
-        if (localNotes) {
-          const parsed = JSON.parse(localNotes);
-          if (parsed.length > 0) {
-            await fetch('/api/sync/sticky-notes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ notes: parsed })
-            });
-          }
-        }
+        // 1. Backup Siklus 1 (sticky_note) - HAPUS auto-post all localNotes agar tidak duplikat saat refresh
 
         // 2. Backup Siklus 3 (priority_item)
         const localPriority = localStorage.getItem('sukahaji_priority_items_v3');

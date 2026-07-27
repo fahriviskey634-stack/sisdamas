@@ -23,86 +23,8 @@ interface MapPin {
   photo_url?: string;
 }
 
-// Realistic sample pins for Desa Sukahaji Dusun 1, 2, and 3
-const INITIAL_DEMO_PINS: MapPin[] = [
-  {
-    id: 'pin-sukahaji-1',
-    kk_name: 'Bpk. Maman Rohman',
-    rt_label: 'RT 01 / RW 01 (Dusun 2)',
-    latitude: -6.7268,
-    longitude: 107.3645,
-    gps_accuracy: 4.2,
-    survey_status: 'verified',
-    welfare_level: 'Sejahtera I',
-    housing_status: 'Milik Sendiri',
-    housing_condition: 'Layak Huni',
-    family_size: 4,
-    problems: [
-      { category: 'Infrastruktur', description: 'Drainase selokan RT 01 tersumbat saat hujan' },
-      { category: 'Kesehatan', description: 'Perlu tambahan fasilitas posyandu lansia' }
-    ],
-    potentials: [
-      { category: 'Usaha Mikro/UMKM', description: 'Produksi keripik pisang skala rumah tangga' }
-    ]
-  },
-  {
-    id: 'pin-sukahaji-2',
-    kk_name: 'Bpk. Hendra Wijaya',
-    rt_label: 'RT 02 / RW 05 (Dusun 2)',
-    latitude: -6.7285,
-    longitude: 107.3620,
-    gps_accuracy: 3.8,
-    survey_status: 'completed',
-    welfare_level: 'Pra Sejahtera',
-    housing_status: 'Milik Sendiri',
-    housing_condition: 'Rutilahu (Perbaikan Atap)',
-    family_size: 5,
-    problems: [
-      { category: 'Infrastruktur', description: 'Atap bocor dan penerangan jalan belum memadai' }
-    ],
-    potentials: [
-      { category: 'Pertanian', description: 'Lahan kebun tomat 200m2' }
-    ]
-  },
-  {
-    id: 'pin-sukahaji-3',
-    kk_name: 'Bpk. Dadang Kusnadi',
-    rt_label: 'RT 01 / RW 03 (Dusun 1)',
-    latitude: -6.7235,
-    longitude: 107.3580,
-    gps_accuracy: 5.1,
-    survey_status: 'verified',
-    welfare_level: 'Sejahtera II',
-    housing_status: 'Milik Sendiri',
-    housing_condition: 'Layak Huni',
-    family_size: 3,
-    problems: [
-      { category: 'Ekonomi', description: 'Akses permodalan pupuk pertanian terbatas' }
-    ],
-    potentials: [
-      { category: 'Peternakan', description: 'Budidaya kambing perah' }
-    ]
-  },
-  {
-    id: 'pin-sukahaji-4',
-    kk_name: 'Bpk. Ujang Suherman',
-    rt_label: 'RT 03 / RW 08 (Dusun 3)',
-    latitude: -6.7330,
-    longitude: 107.3650,
-    gps_accuracy: 4.0,
-    survey_status: 'locked',
-    welfare_level: 'Sejahtera I',
-    housing_status: 'Milik Sendiri',
-    housing_condition: 'Layak Huni',
-    family_size: 4,
-    problems: [
-      { category: 'Lingkungan', description: 'Pengelolaan sampah wilayah RW 08 perlu tempat pembuangan terpadu' }
-    ],
-    potentials: [
-      { category: 'Keterampilan Khusus', description: 'Kerajinan anyaman bambu' }
-    ]
-  }
-];
+// Sample pins array initialized empty (only real surveyed households will be displayed)
+const INITIAL_DEMO_PINS: MapPin[] = [];
 
 // Helper to create custom colored HTML markers with category icon emoji and pulse glow
 const createHtmlIcon = (color: string, number: number, iconEmoji: string = '🏠') => {
