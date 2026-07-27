@@ -190,6 +190,14 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
   const totalMasalah = filteredSurveys.reduce((acc, curr) => acc + (curr.problems?.length || 0), 0);
   const totalPotensi = filteredSurveys.reduce((acc, curr) => acc + (curr.potentials?.length || 0), 0);
 
+  const handleClearLocalDrafts = () => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus data draf sensus uji coba dari browser?')) {
+      localStorage.removeItem('survey_drafts');
+      localStorage.removeItem('sukahaji_draft_surveys');
+      fetchSurveys();
+    }
+  };
+
   // Target Editor Handlers
   const handleTargetChange = (id: string, field: 'target_kk' | 'target_warga', val: number) => {
     const next = rtTargets.map((t: RtTarget) => t.id === id ? { ...t, [field]: Math.max(1, val) } : t);
@@ -344,13 +352,22 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
               </p>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button 
                 onClick={() => setShowTargetEditor(true)}
                 className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3.5 py-2.5 rounded-xl text-xs font-bold backdrop-blur-md transition flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 <Save className="h-4 w-4" /> Edit Target RT
               </button>
+              {surveys.length > 0 && (
+                <button
+                  onClick={handleClearLocalDrafts}
+                  className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  title="Hapus draf uji coba di browser ini"
+                >
+                  <Trash2 className="h-4 w-4" /> Reset Draf Uji Coba
+                </button>
+              )}
               {draftCount > 0 && (
                 <button
                   onClick={handleSyncDrafts}
