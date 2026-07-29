@@ -145,27 +145,27 @@ function DashboardContent() {
   }, [currentUser]);
 
   const updateDraftCount = () => {
-    const saved = localStorage.getItem('sukahaji_draft_surveys');
-    if (saved) {
-      try {
-        const drafts = JSON.parse(saved);
-        setDraftCount(drafts.length);
-      } catch {
-        setDraftCount(0);
-      }
-    } else {
+    try {
+      const saved1 = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+      const saved2 = JSON.parse(localStorage.getItem('sukahaji_draft_surveys') || '[]');
+      const total = (Array.isArray(saved1) ? saved1.length : 0) + (Array.isArray(saved2) ? saved2.length : 0);
+      setDraftCount(total);
+    } catch {
       setDraftCount(0);
     }
   };
 
   const handleSyncDrafts = async () => {
-    const saved = localStorage.getItem('sukahaji_draft_surveys');
-    if (!saved) return;
+    let drafts: any[] = [];
+    try {
+      const saved1 = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+      const saved2 = JSON.parse(localStorage.getItem('sukahaji_draft_surveys') || '[]');
+      drafts = [...(Array.isArray(saved1) ? saved1 : []), ...(Array.isArray(saved2) ? saved2 : [])];
+    } catch {}
+
+    if (drafts.length === 0) return;
 
     try {
-      const drafts = JSON.parse(saved);
-      if (drafts.length === 0) return;
-
       setSyncing(true);
       setSyncStatus(`Mengirim ${drafts.length} data survei ke server cloud...`);
 
@@ -181,6 +181,7 @@ function DashboardContent() {
         throw new Error(data.error || 'Gagal sinkronisasi');
       }
 
+      localStorage.removeItem('survey_drafts');
       localStorage.removeItem('sukahaji_draft_surveys');
       updateDraftCount();
       setSyncStatus(`✓ Berhasil mengirim ${drafts.length} data survei!`);

@@ -156,7 +156,7 @@ const coordinateSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { surveys } = body;
+    const surveys = body.surveys || body.drafts || (body.client_uuid ? [body] : null);
 
     if (!surveys || !Array.isArray(surveys)) {
       return NextResponse.json(
@@ -167,6 +167,7 @@ export async function POST(req: NextRequest) {
 
     const supabaseServer = createClient(supabaseUrl, supabaseAnonKey);
     const results = [];
+    const isUUID = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
     for (const item of surveys) {
       const {
@@ -180,6 +181,8 @@ export async function POST(req: NextRequest) {
         family_size,
         housing_status,
         housing_condition,
+        main_job,
+        monthly_income,
         problems,
         potentials,
         photo_url,
@@ -208,18 +211,21 @@ export async function POST(req: NextRequest) {
 
         // 3. Begin manual inserts (since standard Supabase doesn't support complex SQL transactions via simple HTTP client directly)
         // a. Insert Household
+        const validRtId = isUUID(rt_id) ? rt_id : null;
         const { data: householdData, error: hhError } = await supabaseServer
           .from('household')
           .insert([
             {
-              rt_id,
-              kk_name,
-              kk_number,
+              rt_id: validRtId,
+              kk_name: kk_name || 'Kepala Keluarga',
+              kk_number: kk_number || null,
               latitude,
               longitude,
-              gps_accuracy,
+              gps_accuracy: gps_accuracy || 0,
               survey_status: 'completed',
-              created_by: surveyor_id
+              created_by: surveyor_id,
+              main_job: main_job || null,
+              monthly_income: monthly_income || null
             }
           ])
           .select()
@@ -238,6 +244,8 @@ export async function POST(req: NextRequest) {
               family_size,
               housing_status,
               housing_condition,
+              main_job: main_job || null,
+              monthly_income: monthly_income || null,
               client_uuid
             }
           ])

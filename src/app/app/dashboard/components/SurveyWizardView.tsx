@@ -29,6 +29,9 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
   const [welfareLevel, setWelfareLevel] = useState('Sejahtera I');
   const [educationLevel, setEducationLevel] = useState('SMA');
   const [mainJob, setMainJob] = useState('Petani');
+  const [customJob, setCustomJob] = useState('');
+  const [monthlyIncome, setMonthlyIncome] = useState('< Rp 1.000.000');
+  const [customIncome, setCustomIncome] = useState('');
 
   const [problems, setProblems] = useState<any[]>([]);
   const [newProbCat, setNewProbCat] = useState('Infrastruktur');
@@ -101,6 +104,9 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
   };
 
   const handleSave = async () => {
+    const finalJob = mainJob === 'Lainnya' ? (customJob.trim() || 'Lainnya') : mainJob;
+    const finalIncome = monthlyIncome === 'Lainnya' ? (customIncome.trim() || 'Lainnya') : monthlyIncome;
+
     const draft: DraftSurvey = {
       client_uuid: 'survey-' + Math.random().toString(36).substring(2, 11),
       rt_id: selectedRt,
@@ -115,7 +121,8 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
       housing_condition: housingCondition,
       welfare_level: welfareLevel,
       education_level: educationLevel,
-      main_job: mainJob,
+      main_job: finalJob,
+      monthly_income: finalIncome,
       problems,
       potentials,
       photo_url: photoBase64,
@@ -140,7 +147,15 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
       });
 
       if (res.ok) {
-        setSuccess(`✓ Sukses! Data Kuesioner "${kkName}" Berhasil Disimpan Otomatis ke Cloud Server!`);
+        // Clear successfully synced draft from local storage so it's loaded directly from Cloud DB
+        try {
+          const currentDrafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+          const remaining = currentDrafts.filter((d: any) => d.client_uuid !== draft.client_uuid);
+          localStorage.setItem('survey_drafts', JSON.stringify(remaining));
+          localStorage.removeItem('sukahaji_draft_surveys');
+          if (updateDraftCount) updateDraftCount();
+        } catch {}
+        setSuccess(`✓ Sukses! Data Kuesioner "${kkName}" Berhasil Disimpan & Tersinkronisasi ke Cloud Server!`);
       } else {
         setSuccess(`✓ Data tersimpan di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
       }
@@ -295,12 +310,41 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
                 <option value="Pedagang">Pedagang / Warung</option>
                 <option value="Pegawai Swasta/PNS">Pegawai Swasta / PNS</option>
                 <option value="Wiraswasta">Wiraswasta / UMKM</option>
-                <option value="Lainnya">Lainnya</option>
+                <option value="Lainnya">Lainnya (Ketik Manual)...</option>
               </select>
+              {mainJob === 'Lainnya' && (
+                <input
+                  type="text"
+                  placeholder="Ketik mata pencaharian manual..."
+                  value={customJob}
+                  onChange={(e) => setCustomJob(e.target.value)}
+                  className="w-full mt-1.5 rounded border border-teal-300 bg-teal-50/50 text-slate-900 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 font-semibold"
+                />
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <label className="block text-xxs font-bold text-slate-500 uppercase mb-1">Rata-Rata Penghasilan / Bln</label>
+              <select value={monthlyIncome} onChange={(e) => setMonthlyIncome(e.target.value)} className="w-full rounded border border-slate-300 text-slate-900 bg-white px-2.5 py-2 text-xs font-semibold">
+                <option value="< Rp 1.000.000">&lt; Rp 1.000.000</option>
+                <option value="Rp 1.000.000 - Rp 3.000.000">Rp 1.000.000 - Rp 3.000.000</option>
+                <option value="Rp 3.000.000 - Rp 5.000.000">Rp 3.000.000 - Rp 5.000.000</option>
+                <option value="> Rp 5.000.000">&gt; Rp 5.000.000</option>
+                <option value="Lainnya">Lainnya (Ketik Manual)...</option>
+              </select>
+              {monthlyIncome === 'Lainnya' && (
+                <input
+                  type="text"
+                  placeholder="Ketik penghasilan manual (cth: Rp 800.000 atau Tidak Tetap)..."
+                  value={customIncome}
+                  onChange={(e) => setCustomIncome(e.target.value)}
+                  className="w-full mt-1.5 rounded border border-teal-300 bg-teal-50/50 text-slate-900 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600 font-semibold"
+                />
+              )}
+            </div>
+
             <div>
               <label className="block text-xxs font-bold text-slate-500 uppercase mb-1">Tingkat Kesejahteraan</label>
               <select value={welfareLevel} onChange={(e) => setWelfareLevel(e.target.value)} className="w-full rounded border border-slate-300 text-slate-900 bg-white px-2.5 py-2 text-xs">

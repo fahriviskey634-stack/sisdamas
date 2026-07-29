@@ -13,6 +13,7 @@ export interface DraftSurvey {
   welfare_level?: string;
   education_level?: string;
   main_job?: string;
+  monthly_income?: string;
   problems: { category: string; description: string }[];
   potentials: { category: string; description: string }[];
   photo_url: string; // DataURI compressed image

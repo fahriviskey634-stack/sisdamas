@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     // Fetch survey reports
     const { data: surveys, error } = await supabaseServer
       .from('survey')
-      .select('id, family_size, housing_status, housing_condition, submitted_at, household(kk_name, kk_number, latitude, longitude, rt(rt_number, rw(rw_number)))')
+      .select('id, family_size, housing_status, housing_condition, main_job, monthly_income, submitted_at, household(kk_name, kk_number, latitude, longitude, main_job, monthly_income, rt(rt_number, rw(rw_number)))')
       .is('deleted_at', null);
 
     let rows = [];
@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
           'RT': 'RT 01',
           'RW': 'RW 01',
           'Jumlah Jiwa': 4,
+          'Mata Pencaharian': 'Petani',
+          'Penghasilan / Bulan': 'Rp 1.000.000 - Rp 3.000.000',
           'Status Rumah': 'Milik Sendiri',
           'Kondisi Rumah': 'Layak Huni',
           'Latitude': -6.8471,
@@ -40,6 +42,8 @@ export async function GET(req: NextRequest) {
           'RT': 'RT 02',
           'RW': 'RW 01',
           'Jumlah Jiwa': 5,
+          'Mata Pencaharian': 'Buruh Harian',
+          'Penghasilan / Bulan': '< Rp 1.000.000',
           'Status Rumah': 'Sewa',
           'Kondisi Rumah': 'Layak Huni',
           'Latitude': -6.8465,
@@ -56,11 +60,13 @@ export async function GET(req: NextRequest) {
         'RT': s.household?.rt?.rt_number || 'N/A',
         'RW': s.household?.rt?.rw?.rw_number || 'N/A',
         'Jumlah Jiwa': s.family_size || 0,
+        'Mata Pencaharian': s.main_job || s.household?.main_job || 'N/A',
+        'Penghasilan / Bulan': s.monthly_income || s.household?.monthly_income || 'N/A',
         'Status Rumah': s.housing_status || 'N/A',
         'Kondisi Rumah': s.housing_condition || 'N/A',
         'Latitude': s.household?.latitude || 0,
         'Longitude': s.household?.longitude || 0,
-        'Tanggal Submit': new Date(s.submitted_at).toLocaleDateString()
+        'Tanggal Submit': new Date(s.submitted_at || Date.now()).toLocaleDateString()
       }));
     }
 

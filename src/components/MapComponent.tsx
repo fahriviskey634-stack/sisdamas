@@ -18,6 +18,8 @@ interface MapPin {
   housing_status?: string;
   housing_condition?: string;
   family_size?: number;
+  main_job?: string;
+  monthly_income?: string;
   problems: { category: string; description: string }[];
   potentials?: { category: string; description: string }[];
   photo_url?: string;
@@ -79,6 +81,8 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
   const [boundaryData, setBoundaryData] = useState<any>(null);
   const [showLegendMobile, setShowLegendMobile] = useState(false);
   const [editingPin, setEditingPin] = useState<MapPin | null>(null);
+  const [syncingCloud, setSyncingCloud] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
 
   // Fetch real GeoJSON administrative boundary
   useEffect(() => {
@@ -88,97 +92,139 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
       .catch((err) => console.error('Error loading GeoJSON boundary:', err));
   }, []);
 
+  const syncLocalDraftsToCloud = async () => {
+    try {
+      const saved1 = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+      const saved2 = JSON.parse(localStorage.getItem('sukahaji_draft_surveys') || '[]');
+      const allDrafts = [...(Array.isArray(saved1) ? saved1 : []), ...(Array.isArray(saved2) ? saved2 : [])];
+      
+      if (allDrafts.length > 0) {
+        const res = await fetch('/api/surveys/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ drafts: allDrafts })
+        });
+        if (res.ok) {
+          localStorage.removeItem('survey_drafts');
+          localStorage.removeItem('sukahaji_draft_surveys');
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-sync local drafts exception:', e);
+    }
+  };
+
+  const fetchRealMapData = async () => {
+    // 1. Auto-sync any unsynced local drafts to Cloud Server
+    await syncLocalDraftsToCloud();
+
+    let loadedDbPins: MapPin[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('household')
+        .select(`
+          id,
+          kk_name,
+          latitude,
+          longitude,
+          gps_accuracy,
+          survey_status,
+          monthly_income,
+          main_job,
+          rt (
+            rt_number,
+            rw (
+              rw_number
+            )
+          ),
+          survey (
+            id,
+            monthly_income,
+            main_job,
+            problem (
+              category,
+              description
+            )
+          )
+        `)
+        .is('deleted_at', null);
+
+      if (!error && data) {
+        loadedDbPins = data.map((h: any) => {
+          const rawProblems = h.survey?.[0]?.problem || [];
+          const problems = rawProblems.map((p: any) => ({
+            category: p.category,
+            description: p.description
+          }));
+
+          const rtName = h.rt?.rt_number || 'RT 01';
+          const rwName = h.rt?.rw?.rw_number || 'RW 01';
+
+          return {
+            id: h.id,
+            kk_name: h.kk_name,
+            rt_label: `${rtName} / ${rwName}`,
+            latitude: Number(h.latitude),
+            longitude: Number(h.longitude),
+            gps_accuracy: Number(h.gps_accuracy || 0),
+            survey_status: h.survey_status,
+            monthly_income: h.monthly_income || h.survey?.[0]?.monthly_income || '< Rp 1.000.000',
+            main_job: h.main_job || h.survey?.[0]?.main_job || 'Petani',
+            problems
+          };
+        });
+      }
+    } catch (err) {
+      console.warn('Database fetch fallback active.');
+    }
+
+    // Merge local offline drafts if any remaining
+    const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+    const draftPins: MapPin[] = drafts.map((d: any) => ({
+      id: d.client_uuid || `draft-map-${Math.random()}`,
+      kk_name: d.kk_name,
+      rt_label: d.rt_label,
+      latitude: Number(d.latitude),
+      longitude: Number(d.longitude),
+      gps_accuracy: Number(d.gps_accuracy || 0),
+      survey_status: 'completed',
+      welfare_level: d.welfare_level,
+      housing_status: d.housing_status,
+      housing_condition: d.housing_condition,
+      family_size: d.family_size,
+      main_job: d.main_job,
+      monthly_income: d.monthly_income,
+      problems: d.problems || [],
+      potentials: d.potentials || [],
+      photo_url: d.photo_url
+    }));
+
+    // Load deleted IDs blacklist and edited pins map from localStorage
+    const deletedIds: string[] = JSON.parse(localStorage.getItem('sukahaji_deleted_pin_ids') || '[]');
+    const editedPinsMap: Record<string, MapPin> = JSON.parse(localStorage.getItem('sukahaji_edited_pins') || '{}');
+
+    const allMerged = [...INITIAL_DEMO_PINS, ...loadedDbPins, ...draftPins];
+    const uniqueMap = new Map();
+    allMerged.forEach(p => {
+      if (!deletedIds.includes(p.id)) {
+        const finalPin = editedPinsMap[p.id] ? { ...p, ...editedPinsMap[p.id] } : p;
+        uniqueMap.set(p.id, finalPin);
+      }
+    });
+    setPins(Array.from(uniqueMap.values()));
+  };
+
+  const handleManualSync = async () => {
+    setSyncingCloud(true);
+    setSyncMsg('⏳ Sinkronisasi data pin ke Cloud Server Supabase...');
+    await fetchRealMapData();
+    setSyncMsg('✓ Berhasil menyinkronkan seluruh Pin SIMAP dengan Cloud Server!');
+    setSyncingCloud(false);
+    setTimeout(() => setSyncMsg(''), 3000);
+  };
+
   // Fetch real household coordinates and problems list from Supabase + localStorage
   useEffect(() => {
-    const fetchRealMapData = async () => {
-      let loadedDbPins: MapPin[] = [];
-      try {
-        const { data, error } = await supabase
-          .from('household')
-          .select(`
-            id,
-            kk_name,
-            latitude,
-            longitude,
-            gps_accuracy,
-            survey_status,
-            rt (
-              rt_number,
-              rw (
-                rw_number
-              )
-            ),
-            survey (
-              id,
-              problem (
-                category,
-                description
-              )
-            )
-          `)
-          .is('deleted_at', null);
-
-        if (!error && data) {
-          loadedDbPins = data.map((h: any) => {
-            const rawProblems = h.survey?.[0]?.problem || [];
-            const problems = rawProblems.map((p: any) => ({
-              category: p.category,
-              description: p.description
-            }));
-
-            const rtName = h.rt?.rt_number || 'RT 01';
-            const rwName = h.rt?.rw?.rw_number || 'RW 01';
-
-            return {
-              id: h.id,
-              kk_name: h.kk_name,
-              rt_label: `${rtName} / ${rwName}`,
-              latitude: Number(h.latitude),
-              longitude: Number(h.longitude),
-              gps_accuracy: Number(h.gps_accuracy || 0),
-              survey_status: h.survey_status,
-              problems
-            };
-          });
-        }
-      } catch (err) {
-        console.warn('Database fetch fallback active.');
-      }
-
-      // Merge local offline drafts
-      const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
-      const draftPins: MapPin[] = drafts.map((d: any) => ({
-        id: d.client_uuid || `draft-map-${Math.random()}`,
-        kk_name: d.kk_name,
-        rt_label: d.rt_label,
-        latitude: Number(d.latitude),
-        longitude: Number(d.longitude),
-        gps_accuracy: Number(d.gps_accuracy || 0),
-        survey_status: 'completed',
-        welfare_level: d.welfare_level,
-        housing_status: d.housing_status,
-        housing_condition: d.housing_condition,
-        family_size: d.family_size,
-        problems: d.problems || [],
-        potentials: d.potentials || [],
-        photo_url: d.photo_url
-      }));
-
-      // Load deleted IDs blacklist and edited pins map from localStorage
-      const deletedIds: string[] = JSON.parse(localStorage.getItem('sukahaji_deleted_pin_ids') || '[]');
-      const editedPinsMap: Record<string, MapPin> = JSON.parse(localStorage.getItem('sukahaji_edited_pins') || '{}');
-
-      const allMerged = [...INITIAL_DEMO_PINS, ...loadedDbPins, ...draftPins];
-      const uniqueMap = new Map();
-      allMerged.forEach(p => {
-        if (!deletedIds.includes(p.id)) {
-          const finalPin = editedPinsMap[p.id] ? { ...p, ...editedPinsMap[p.id] } : p;
-          uniqueMap.set(p.id, finalPin);
-        }
-      });
-      setPins(Array.from(uniqueMap.values()));
-    };
-
     fetchRealMapData();
   }, []);
 
@@ -433,8 +479,17 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
           </div>
         </div>
 
-        {/* GIS Data Export Action Buttons for Google Looker Studio & Google Earth */}
+        {/* GIS Data Export & Cloud Sync Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleManualSync}
+            disabled={syncingCloud}
+            className="flex items-center gap-1.5 rounded-xl bg-teal-sedang hover:bg-[#113a48] text-white font-extrabold text-xs px-3.5 py-2 transition shadow-sm cursor-pointer disabled:opacity-50"
+            title="Sinkronkan data draf lokal dan muat pin terbaru dari Cloud Supabase"
+          >
+            {syncingCloud ? '⏳ Menyelaraskan...' : '🔄 Sinkronkan Pin Cloud'}
+          </button>
           <button
             type="button"
             onClick={handleExportCSVForLooker}
@@ -453,6 +508,13 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
           </button>
         </div>
       </div>
+
+      {syncMsg && (
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs font-bold text-teal-900 animate-fade-in flex items-center justify-between">
+          <span>{syncMsg}</span>
+          <span className="text-[10px] text-teal-700 font-normal">Tersinkronisasi dengan Supabase Cloud Database</span>
+        </div>
+      )}
 
       {/* Leaflet Map Container */}
       <div className="h-[540px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-10">
@@ -529,6 +591,14 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
                     </div>
 
                     <div className="grid grid-cols-2 gap-1.5 text-xxs font-semibold bg-slate-50 p-2 rounded-lg border border-slate-200">
+                      <div>
+                        <span className="text-slate-400 block text-[8px] uppercase font-bold">Penghasilan / Bln</span>
+                        <span className="text-emerald-700 font-extrabold">{pin.monthly_income || '< Rp 1.000.000'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[8px] uppercase font-bold">Pekerjaan Utama</span>
+                        <span className="text-slate-800 font-bold">{pin.main_job || 'Petani'}</span>
+                      </div>
                       <div>
                         <span className="text-slate-400 block text-[8px] uppercase font-bold">Kesejahteraan</span>
                         <span className="text-slate-800 font-bold">{pin.welfare_level || 'Sejahtera I'}</span>

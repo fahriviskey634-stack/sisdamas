@@ -23,7 +23,8 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
   const [newContent, setNewContent] = useState('');
   const [selectedColumn, setSelectedColumn] = useState<'Harapan' | 'Masalah' | 'Potensi' | 'Lainnya'>('Harapan');
   const [selectedColor, setSelectedColor] = useState('#FEF08A');
-  const [rtNumber, setRtNumber] = useState(isGroup56 ? 'Dusun 2 (RW 01, 05, 11)' : (rtRwOptions[0] || 'RT 01 / RW 01'));
+  const [groupFilter, setGroupFilter] = useState<string>(userGroup || '56');
+  const [rtNumber, setRtNumber] = useState(rtRwOptions[0] || 'RT 01 / RW 01');
   const [authorName, setAuthorName] = useState(currentUser?.name || 'Anonim');
   const [saving, setSaving] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -100,7 +101,6 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     } catch (err) {
       console.warn('Cloud sticky notes fetch failed, using local cache:', err);
       setSyncStatus('offline');
-
     }
   };
 
@@ -115,7 +115,7 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
       column_name: selectedColumn,
       content: newContent.trim(),
       color: selectedColor,
-      rt_number: isGroup56 ? 'Dusun 2 (RW 01, 05, 11)' : rtNumber,
+      rt_number: rtNumber || 'RT 01 / RW 01',
       author: authorName || currentUser?.name || 'Anonim',
       created_at: new Date().toISOString()
     };
@@ -208,8 +208,34 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
     setTimeout(() => setFeedbackMsg(''), 3000);
   };
 
-  // Tampilkan semua notes tanpa filter wilayah (Siklus 1 = Dusun 2 saja)
-  const filteredNotes = notes;
+  // Filter notes berdasarkan kelompok wilayah
+  const filteredNotes = notes.filter((n) => {
+    if (groupFilter === 'All') return true;
+    const rtStr = (n.rt_number || '').toUpperCase();
+
+    if (groupFilter === '55') {
+      return rtStr.includes('RW 06') || rtStr.includes('RW 6') || rtStr.includes('55');
+    }
+    if (groupFilter === '56') {
+      return (
+        rtStr.includes('RW 01') ||
+        rtStr.includes('RW 05') ||
+        rtStr.includes('RW 11') ||
+        rtStr.includes('DUSUN 2 (RW 01, 05, 11)') ||
+        rtStr.includes('56') ||
+        (!rtStr.includes('RW 06') && !rtStr.includes('RW 03') && !rtStr.includes('RW 04'))
+      );
+    }
+    if (groupFilter === '57') {
+      return (
+        rtStr.includes('RW 03') ||
+        rtStr.includes('RW 04') ||
+        rtStr.includes('DUSUN 1') ||
+        rtStr.includes('57')
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -249,7 +275,7 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
       {/* Input Form Card */}
       <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200 space-y-4">
         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">➕ Tambah Catatan Rembug Warga</h3>
-        <form onSubmit={handleAddNote} className={`grid grid-cols-1 gap-4 ${isGroup56 ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
+        <form onSubmit={handleAddNote} className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="md:col-span-2 space-y-1">
             <label className="block text-xxs font-bold text-slate-500 uppercase">Isi Catatan / Harapan / Keluhan</label>
             <input
@@ -274,23 +300,20 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
             </select>
           </div>
 
-          {/* Wilayah RT/RW picker — hanya tampil untuk kelompok 55 dan 57 */}
-          {!isGroup56 && (
-            <div className="space-y-1">
-              <label className="block text-xxs font-bold text-slate-500 uppercase">Wilayah RT / RW ({groupConfig.dusun})</label>
-              <select
-                value={rtNumber}
-                onChange={(e) => setRtNumber(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs outline-none focus:border-teal-sedang transition font-bold"
-              >
-                {rtRwOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="space-y-1">
+            <label className="block text-xxs font-bold text-slate-500 uppercase">Wilayah RT / RW (Kelompok {userGroup})</label>
+            <select
+              value={rtNumber}
+              onChange={(e) => setRtNumber(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs outline-none focus:border-teal-sedang transition font-bold"
+            >
+              {rtRwOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
 
-          <div className={`flex flex-wrap items-center justify-between gap-3 ${isGroup56 ? 'md:col-span-3' : 'md:col-span-4'} pt-2 border-t border-slate-100`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 md:col-span-4 pt-2 border-t border-slate-100">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xxs font-bold text-slate-500 uppercase">Warna Note:</span>
               <div className="flex flex-wrap gap-2">
@@ -319,13 +342,25 @@ export default function StickyNotesView({ currentUser }: { currentUser?: any }) 
         </form>
       </div>
 
-      {/* Info wilayah */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
-          📌 Papan Sticky Note — Kelompok {userGroup} ({groupConfig.dusun}){isGroup56 && ' • Wilayah RW 01, 05, 11'}
-        </span>
-        <span className="text-xs font-extrabold text-teal-tua bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200">
-          Total: {notes.length} catatan
+      {/* Info & Group Filter Bar */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+            📌 Filter Papan Sticky Note:
+          </span>
+          <select
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            className="rounded-xl border border-teal-300 bg-teal-50 text-teal-900 px-3 py-1.5 text-xs outline-none focus:border-teal-600 transition font-bold"
+          >
+            <option value="All">Semua Kelompok (Kelompok 55, 56, 57)</option>
+            <option value="55">Kelompok 55 — Dusun 2 (RW 06)</option>
+            <option value="56">Kelompok 56 — Dusun 2 (RW 01, 05, 11)</option>
+            <option value="57">Kelompok 57 — Dusun 1 (RW 03, 04)</option>
+          </select>
+        </div>
+        <span className="text-xs font-extrabold text-teal-tua bg-teal-50 px-3.5 py-1.5 rounded-xl border border-teal-200">
+          Tampil: {filteredNotes.length} / {notes.length} Catatan
         </span>
       </div>
 
