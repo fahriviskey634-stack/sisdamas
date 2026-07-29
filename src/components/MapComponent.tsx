@@ -305,14 +305,15 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
 
   // Dual filtering by RT/RW and Kelompok
   const filteredPins = pins.filter(pin => {
-    const matchRt = rtFilter === 'All' || pin.rt_label.includes(rtFilter);
+    const matchRt = rtFilter === 'All' || (pin.rt_label && pin.rt_label.includes(rtFilter));
     let matchGroup = true;
+    const label = (pin.rt_label || '').toUpperCase();
     if (groupFilter === '55') {
-      matchGroup = pin.rt_label.includes('RW 06');
+      matchGroup = label.includes('RW 06') || label.includes('55');
     } else if (groupFilter === '56') {
-      matchGroup = pin.rt_label.includes('RW 01') || pin.rt_label.includes('RW 05') || pin.rt_label.includes('RW 11');
+      matchGroup = label.includes('RW 01') || label.includes('RW 05') || label.includes('RW 11') || label.includes('DUSUN 2') || label.includes('56') || (!label.includes('RW 06') && !label.includes('RW 03') && !label.includes('RW 04'));
     } else if (groupFilter === '57') {
-      matchGroup = pin.rt_label.includes('RW 03') || pin.rt_label.includes('RW 04');
+      matchGroup = label.includes('RW 03') || label.includes('RW 04') || label.includes('57');
     }
     return matchRt && matchGroup;
   });

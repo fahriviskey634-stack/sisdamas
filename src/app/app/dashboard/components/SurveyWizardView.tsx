@@ -157,17 +157,20 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
       });
 
       if (res.ok) {
-        // Clear successfully synced draft from local storage so it's loaded directly from Cloud DB
-        try {
-          const currentDrafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
-          const remaining = currentDrafts.filter((d: any) => d.client_uuid !== draft.client_uuid);
-          localStorage.setItem('survey_drafts', JSON.stringify(remaining));
-          localStorage.removeItem('sukahaji_draft_surveys');
-          if (updateDraftCount) updateDraftCount();
-        } catch {}
-        setSuccess(`✓ Sukses! Data Kuesioner "${kkName}" Berhasil Disimpan & Tersinkronisasi ke Cloud Server!`);
+        const resData = await res.json().catch(() => ({}));
+        if (resData.success) {
+          try {
+            const currentDrafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+            const remaining = currentDrafts.filter((d: any) => d.client_uuid !== draft.client_uuid);
+            localStorage.setItem('survey_drafts', JSON.stringify(remaining));
+            if (updateDraftCount) updateDraftCount();
+          } catch {}
+          setSuccess(`✓ Sukses! Data Kuesioner "${kkName}" Berhasil Disimpan & Tersinkronisasi ke Cloud Server!`);
+        } else {
+          setSuccess(`✓ Data tersimpan aman di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
+        }
       } else {
-        setSuccess(`✓ Data tersimpan di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
+        setSuccess(`✓ Data tersimpan aman di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
       }
     } catch (e) {
       setSuccess(`✓ Data tersimpan di HP/Laptop (Otomatis terkirim ke cloud saat online).`);
