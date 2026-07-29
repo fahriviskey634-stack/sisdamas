@@ -178,9 +178,14 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
       console.warn('Database fetch fallback active.');
     }
 
-    // Merge local offline drafts if any remaining
-    const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
-    const draftPins: MapPin[] = drafts.map((d: any) => ({
+    // Merge local offline drafts & permanent history backup so data never disappears
+    const drafts1 = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+    const drafts2 = JSON.parse(localStorage.getItem('sukahaji_draft_surveys') || '[]');
+    const historyBackup = JSON.parse(localStorage.getItem('sukahaji_survey_history_backup') || '[]');
+
+    const allLocalSurveys = [...(Array.isArray(drafts1) ? drafts1 : []), ...(Array.isArray(drafts2) ? drafts2 : []), ...(Array.isArray(historyBackup) ? historyBackup : [])];
+
+    const draftPins: MapPin[] = allLocalSurveys.map((d: any) => ({
       id: d.client_uuid || `draft-map-${Math.random()}`,
       kk_name: d.kk_name,
       rt_label: d.rt_label,

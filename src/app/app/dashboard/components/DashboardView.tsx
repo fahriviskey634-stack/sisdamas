@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, StickyNote, User, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Navigation, AlertTriangle, CheckCircle, Info, Tag } from 'lucide-react';
+import { LayoutDashboard, StickyNote, User, CheckSquare, BarChart3, HelpCircle, RefreshCw, AlertCircle, PlusCircle, Map as MapIcon, FileSpreadsheet, Activity, ChevronRight, Save, Trash2, Navigation, AlertTriangle, CheckCircle, Info, Tag } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { RtTarget } from './types';
 import { getGroupInfoText, getGroupRwList, GROUP_PALETTES } from './constants';
@@ -141,7 +141,11 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
   }, []);
 
   const fetchSurveys = async () => {
-    const drafts = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+    const drafts1 = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
+    const drafts2 = JSON.parse(localStorage.getItem('sukahaji_draft_surveys') || '[]');
+    const historyBackup = JSON.parse(localStorage.getItem('sukahaji_survey_history_backup') || '[]');
+    const localSurveys = [...(Array.isArray(drafts1) ? drafts1 : []), ...(Array.isArray(drafts2) ? drafts2 : []), ...(Array.isArray(historyBackup) ? historyBackup : [])];
+
     let dbSurveys: any[] = [];
     try {
       const { data } = await supabase
@@ -174,7 +178,13 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
       }
     } catch {}
 
-    setSurveys([...dbSurveys, ...drafts]);
+    const uniqueMap = new window.Map<string, any>();
+    [...dbSurveys, ...localSurveys].forEach(s => {
+      const key = s.id || s.client_uuid || `survey-${Math.random()}`;
+      uniqueMap.set(key, s);
+    });
+
+    setSurveys(Array.from(uniqueMap.values()));
   };
 
   // Filter surveys by RW/RT
@@ -858,7 +868,7 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
                 className="p-3 bg-slate-50 hover:bg-teal-sedang/5 hover:border-teal-sedang/30 rounded-xl border border-slate-200/60 cursor-pointer transition-all duration-200 flex items-center gap-3.5"
               >
                 <div className="p-2.5 bg-blue-50 rounded-lg text-blue-600">
-                  <Map className="h-4.5 w-4.5" />
+                  <MapIcon className="h-4.5 w-4.5" />
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800 text-xs">Peta GIS Tematik</h4>

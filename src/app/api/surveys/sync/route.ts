@@ -209,53 +209,63 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // 3. Begin manual inserts (since standard Supabase doesn't support complex SQL transactions via simple HTTP client directly)
-        // a. Insert Household
+        // 3. Begin manual inserts
+        // a. Insert Household with schema column fallback
         const validRtId = isUUID(rt_id) ? rt_id : null;
-        const { data: householdData, error: hhError } = await supabaseServer
-          .from('household')
-          .insert([
-            {
-              rt_id: validRtId,
-              kk_name: kk_name || 'Kepala Keluarga',
-              kk_number: kk_number || null,
-              latitude,
-              longitude,
-              gps_accuracy: gps_accuracy || 0,
-              survey_status: 'completed',
-              created_by: surveyor_id,
-              main_job: main_job || null,
-              monthly_income: monthly_income || null
-            }
-          ])
-          .select()
-          .single();
+        let householdData: any = null;
 
-        if (hhError) throw hhError;
+        const hhPayload: any = {
+          rt_id: validRtId,
+          kk_name: kk_name || 'Kepala Keluarga',
+          kk_number: kk_number || null,
+          latitude,
+          longitude,
+          gps_accuracy: gps_accuracy || 0,
+          survey_status: 'completed',
+          created_by: surveyor_id
+        };
+        if (main_job) hhPayload.main_job = main_job;
+        if (monthly_income) hhPayload.monthly_income = monthly_income;
 
-        // b. Insert Survey
-        const { data: surveyData, error: svError } = await supabaseServer
-          .from('survey')
-          .insert([
-            {
-              household_id: householdData.id,
-              surveyor_id,
-              project_id: '56000000-0000-0000-0000-000000000056', // Static Project UUID Kelompok 56
-              family_size,
-              housing_status,
-              housing_condition,
-              main_job: main_job || null,
-              monthly_income: monthly_income || null,
-              client_uuid
-            }
-          ])
-          .select()
-          .single();
+        const resHh = await supabaseServer.from('household').insert([hhPayload]).select().single();
+        if (resHh.error) {
+          // Schema fallback: if columns don't exist yet in Supabase, retry without new optional columns
+          delete hhPayload.main_job;
+          delete hhPayload.monthly_income;
+          const resHhRetry = await supabaseServer.from('household').insert([hhPayload]).select().single();
+          if (resHhRetry.error) throw resHhRetry.error;
+          householdData = resHhRetry.data;
+        } else {
+          householdData = resHh.data;
+        }
 
-        if (svError) throw svError;
+        // b. Insert Survey with schema column fallback
+        let surveyData: any = null;
+        const svPayload: any = {
+          household_id: householdData.id,
+          surveyor_id,
+          project_id: '56000000-0000-0000-0000-000000000056', // Static Project UUID Kelompok 56
+          family_size,
+          housing_status,
+          housing_condition,
+          client_uuid
+        };
+        if (main_job) svPayload.main_job = main_job;
+        if (monthly_income) svPayload.monthly_income = monthly_income;
+
+        const resSv = await supabaseServer.from('survey').insert([svPayload]).select().single();
+        if (resSv.error) {
+          delete svPayload.main_job;
+          delete svPayload.monthly_income;
+          const resSvRetry = await supabaseServer.from('survey').insert([svPayload]).select().single();
+          if (resSvRetry.error) throw resSvRetry.error;
+          surveyData = resSvRetry.data;
+        } else {
+          surveyData = resSv.data;
+        }
 
         // c. Insert Problems
-        if (problems && Array.isArray(problems)) {
+        if (problems && Array.isArray(problems) && problems.length > 0) {
           const problemInserts = problems.map(prob => ({
             survey_id: surveyData.id,
             category: prob.category,
@@ -265,7 +275,7 @@ export async function POST(req: NextRequest) {
         }
 
         // d. Insert Potentials
-        if (potentials && Array.isArray(potentials)) {
+        if (potentials && Array.isArray(potentials) && potentials.length > 0) {
           const potentialInserts = potentials.map(pot => ({
             survey_id: surveyData.id,
             category: pot.category,
@@ -276,31 +286,40 @@ export async function POST(req: NextRequest) {
 
         // e. Auto-upload photo to Google Drive and save the drive reference url in Supabase
         if (photo_url) {
-          const mimeType = photo_url.split(';')[0].split(':')[1] || 'image/jpeg';
-          const extension = mimeType.split('/')[1] || 'jpg';
-          const filename = `sensus_${rt_id}_${kk_name.replace(/\s+/g, '_')}_${Date.now()}.${extension}`;
-          const driveUrl = await uploadPhotoToGoogleDrive(photo_url, filename, surveyor_id);
-          
-          await supabaseServer.from('household_photo').insert([
-            {
-              household_id: householdData.id,
-              storage_url: driveUrl,
-              caption: `Fasad depan rumah ${kk_name} (Google Drive)`,
-              uploaded_by: surveyor_id
-            }
-          ]);
+          try {
+            const mimeType = photo_url.split(';')[0].split(':')[1] || 'image/jpeg';
+            const extension = mimeType.split('/')[1] || 'jpg';
+            const filename = `sensus_${rt_id}_${kk_name.replace(/\s+/g, '_')}_${Date.now()}.${extension}`;
+            const driveUrl = await uploadPhotoToGoogleDrive(photo_url, filename, surveyor_id);
+            
+            await supabaseServer.from('household_photo').insert([
+              {
+                household_id: householdData.id,
+                storage_url: driveUrl,
+                caption: `Fasad depan rumah ${kk_name} (Google Drive)`,
+                uploaded_by: surveyor_id
+              }
+            ]);
+          } catch (photoErr) {
+            console.warn('Photo upload warning:', photoErr);
+          }
         }
 
         results.push({ client_uuid, status: 'success' });
       } catch (err: any) {
-        // Safe developer fallback check:
-        // If Supabase database not configured (placeholder credentials), log payload and allow mock success
-        console.log('Syncing data to mock console (Supabase offline fallback):', item);
-        results.push({ client_uuid, status: 'success', note: 'Mock synced (Supabase offline/placeholder mode)' });
+        console.error('Error syncing survey item to Supabase:', err);
+        results.push({ client_uuid, status: 'error', error: err.message || 'Supabase insert error' });
       }
     }
 
-    return NextResponse.json({ success: true, results });
+    const hasErrors = results.some(r => r.status === 'error');
+    const allFailed = results.every(r => r.status === 'error');
+
+    if (allFailed && results.length > 0) {
+      return NextResponse.json({ success: false, error: results[0]?.error || 'Gagal sinkronisasi data', results }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: !hasErrors, results });
   } catch (err: any) {
     return NextResponse.json(
       { error: 'Gagal memproses sinkronisasi data' },

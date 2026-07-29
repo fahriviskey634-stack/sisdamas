@@ -133,7 +133,17 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
     const existing = JSON.parse(localStorage.getItem('survey_drafts') || '[]');
     existing.push(draft);
     localStorage.setItem('survey_drafts', JSON.stringify(existing));
-    updateDraftCount();
+
+    // Permanent local backup key that is NEVER erased on sync, ensuring data never disappears on HP
+    try {
+      const history = JSON.parse(localStorage.getItem('sukahaji_survey_history_backup') || '[]');
+      const idx = history.findIndex((h: any) => h.client_uuid === draft.client_uuid);
+      if (idx >= 0) history[idx] = draft;
+      else history.push(draft);
+      localStorage.setItem('sukahaji_survey_history_backup', JSON.stringify(history));
+    } catch {}
+
+    if (updateDraftCount) updateDraftCount();
 
     setSaving(true);
     setSuccess('⏳ Menyimpan data kuesioner otomatis ke Server Cloud & Supabase Database...');
