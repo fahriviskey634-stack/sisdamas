@@ -323,30 +323,29 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
 
   const getProblemColor = (problems: { category: string }[]) => {
     if (!problems || problems.length === 0) return '#94A3B8';
-    const firstCat = problems[0].category;
-    switch (firstCat) {
-      case 'Infrastruktur': return '#EF4444';
-      case 'Kesehatan': return '#3B82F6';
-      case 'Ekonomi': return '#10B981';
-      case 'Lingkungan': return '#F59E0B';
-      case 'Pendidikan': return '#8B5CF6';
-      case 'Sosial-Budaya': return '#EC4899';
-      default: return '#6B7280';
-    }
+    const cat = (problems[0].category || '').toLowerCase();
+    if (cat.includes('infrastruktur') || cat.includes('jalan')) return '#EF4444'; // Red
+    if (cat.includes('kesehatan') || cat.includes('posyandu') || cat.includes('mbg')) return '#3B82F6'; // Blue
+    if (cat.includes('ekonomi') || cat.includes('emok') || cat.includes('umkm')) return '#10B981'; // Green
+    if (cat.includes('lingkungan') || cat.includes('sampah')) return '#F59E0B'; // Amber
+    if (cat.includes('pendidikan') || cat.includes('guru')) return '#8B5CF6'; // Purple
+    if (cat.includes('sosial') || cat.includes('baznas') || cat.includes('rutilahu')) return '#EC4899'; // Pink
+    if (cat.includes('kelembagaan') || cat.includes('stakeholder')) return '#6366F1'; // Indigo
+    return '#6B7280';
   };
 
   const getCategoryIcon = (problems: { category: string }[]) => {
     if (!problems || problems.length === 0) return '🏠';
-    const firstCat = problems[0].category;
-    switch (firstCat) {
-      case 'Infrastruktur': return '🏗️';
-      case 'Kesehatan': return '🏥';
-      case 'Ekonomi': return '💰';
-      case 'Lingkungan': return '🌿';
-      case 'Pendidikan': return '🎓';
-      case 'Sosial-Budaya': return '🎭';
-      default: return '🏠';
-    }
+    const cat = (problems[0].category || '').toLowerCase();
+    if (cat.includes('infrastruktur') || cat.includes('jalan')) return '🏗️';
+    if (cat.includes('kesehatan') || cat.includes('posyandu') || cat.includes('mbg')) return '🏥';
+    if (cat.includes('ekonomi') || cat.includes('emok')) return '💸';
+    if (cat.includes('umkm') || cat.includes('kuliner')) return '🍱';
+    if (cat.includes('lingkungan') || cat.includes('sampah')) return '🚮';
+    if (cat.includes('pendidikan') || cat.includes('guru')) return '📖';
+    if (cat.includes('sosial') || cat.includes('rutilahu') || cat.includes('baznas')) return '🏚️';
+    if (cat.includes('kelembagaan') || cat.includes('stakeholder')) return '🏛️';
+    return '🏠';
   };
 
   const handleExportCSVForLooker = () => {

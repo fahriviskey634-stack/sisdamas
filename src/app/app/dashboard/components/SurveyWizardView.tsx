@@ -373,19 +373,79 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
             </div>
           </div>
 
-          {/* Dynamic Problems Input */}
+          {/* Dynamic Problems Input with Master Panduan Sektor I-VI Categories */}
           <div className="space-y-3 border-b border-slate-100 pb-4">
-            <span className="text-xxs font-extrabold text-slate-455 uppercase tracking-wider block">Keluhan / Masalah Teridentifikasi (Siklus 2)</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xxs font-extrabold text-slate-455 uppercase tracking-wider block">⚠️ Keluhan / Masalah Teridentifikasi (Siklus 2 — Sektor I-VI)</span>
+              <span className="text-[10px] font-bold text-slate-400">Klik tombol cepat atau ketik manual</span>
+            </div>
+
+            {/* Quick Field Presets for Fast Enumeration */}
+            <div className="flex flex-wrap gap-1.5 p-2.5 bg-rose-50/60 rounded-xl border border-rose-100">
+              <span className="text-[9px] font-black text-rose-800 uppercase tracking-widest block w-full mb-1">⚡ Tombol Pintas Observasi Lapangan Sektor I-VI:</span>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Sosial & Rentan (BAZNAS / RUTILAHU / Janda)'); setNewProbDesc('Rumah Tidak Layak Huni (RUTILAHU) butuh bantuan renovasi fisik'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🏚️ RUTILAHU
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Ekonomi & Bank Emok (Rentenir)'); setNewProbDesc('Warga/UMKM terjerat pinjaman rentenir bunga harian (Bank Emok)'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                💸 Bank Emok / Rentenir
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Sosial & Rentan (BAZNAS / RUTILAHU / Janda)'); setNewProbDesc('Mustahik BAZNAS: Lansia jompo / anak yatim / disabilitas berat sebatang kara'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                👴 Mustahik BAZNAS
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Lingkungan & Sampah (Pampers/Organik)'); setNewProbDesc('Penumpukan sampah liar (pampers/plastik) di kebun & pemakaman'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🚮 Sampah Liar / Pampers
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Kesehatan & Posyandu (MBG/BPJS)'); setNewProbDesc('Masalah data ganda MBG / BPJS Luar Wilayah / Logistik Posyandu'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🏥 Posyandu & MBG
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Pendidikan & Keagamaan (Guru Ngaji)'); setNewProbDesc('Krisis pengajar TPA / guru ngaji di wilayah setempat'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                📖 Krisis Guru Ngaji
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewProbCat('Infrastruktur & Jalan Gang'); setNewProbDesc('Jalan gang pemukiman rusak / belum diaspal terpotong kebun'); }}
+                className="px-2 py-1 bg-white hover:bg-rose-100 text-rose-800 rounded-lg border border-rose-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🛣️ Jalan Gang Rusak
+              </button>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-2">
-              <select value={newProbCat} onChange={(e) => setNewProbCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-bold sm:w-40 shrink-0">
-                <option value="Infrastruktur">Infrastruktur</option>
-                <option value="Kesehatan">Kesehatan</option>
-                <option value="Ekonomi">Ekonomi</option>
-                <option value="Lingkungan">Lingkungan</option>
-                <option value="Pendidikan">Pendidikan</option>
-                <option value="Sosial-Budaya">Sosial-Budaya</option>
+              <select value={newProbCat} onChange={(e) => setNewProbCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-bold sm:w-56 shrink-0">
+                <option value="Infrastruktur & Jalan Gang">Infrastruktur & Jalan Gang</option>
+                <option value="Kesehatan & Posyandu (MBG/BPJS)">Kesehatan & Posyandu (MBG/BPJS)</option>
+                <option value="Ekonomi & Bank Emok (Rentenir)">Ekonomi & Bank Emok (Rentenir)</option>
+                <option value="Lingkungan & Sampah (Pampers/Organik)">Lingkungan & Sampah (Pampers/Organik)</option>
+                <option value="Pendidikan & Keagamaan (Guru Ngaji)">Pendidikan & Keagamaan (Guru Ngaji)</option>
+                <option value="Sosial & Rentan (BAZNAS / RUTILAHU / Janda)">Sosial & Rentan (BAZNAS / RUTILAHU / Janda)</option>
+                <option value="Kelembagaan & Stakeholder Desa">Kelembagaan & Stakeholder Desa</option>
+                <option value="Fasilitas Umum & Keamanan">Fasilitas Umum & Keamanan</option>
               </select>
-              <input type="text" value={newProbDesc} onChange={(e) => setNewProbDesc(e.target.value)} placeholder="Tulis keluhan spesifik rumah tangga..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs" />
+              <input type="text" value={newProbDesc} onChange={(e) => setNewProbDesc(e.target.value)} placeholder="Tulis keluhan spesifik rumah tangga / wilayah..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-medium" />
               <button type="button" onClick={addProblem} className="rounded bg-teal-sedang text-white px-5 py-2 text-xs font-bold hover:bg-kabut transition w-full sm:w-auto">Tambah</button>
             </div>
             {problems.length > 0 && (
@@ -400,18 +460,61 @@ export default function SurveyWizardView({ switchTab, updateDraftCount, currentU
             )}
           </div>
 
-          {/* Dynamic Potentials Input */}
+          {/* Dynamic Potentials Input with Master Panduan Sektor I-VI Categories */}
           <div className="space-y-3">
-            <span className="text-xxs font-extrabold text-slate-455 uppercase tracking-wider block">Potensi Teridentifikasi (Siklus 2)</span>
+            <span className="text-xxs font-extrabold text-slate-455 uppercase tracking-wider block">💡 Potensi Teridentifikasi (Siklus 2 — Sektor I-VI)</span>
+
+            {/* Quick Presets for Potentials */}
+            <div className="flex flex-wrap gap-1.5 p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-100">
+              <span className="text-[9px] font-black text-emerald-800 uppercase tracking-widest block w-full mb-1">⚡ Tombol Pintas Potensi Desa:</span>
+              <button
+                type="button"
+                onClick={() => { setNewPotCat('Usaha Mikro & UMKM (Kuliner/Keripik/Peuyeum)'); setNewPotDesc('Usaha rumahan (Keripik/Peuyeum/Kecimpring/Rengginang) butuh NIB & Digital Marketing'); }}
+                className="px-2 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🍱 UMKM & Olahan Kuliner
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewPotCat('Pengolahan Sampah & Inovasi (Pupuk/Kompos/Brisket)'); setNewPotDesc('Potensi pembuatan pupuk organik dari kotoran hewan & brisket batok kelapa'); }}
+                className="px-2 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🌿 Inovasi Kompos & Brisket
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewPotCat('Jasa & Keterampilan (Penjahit/Rias/Pengolahan Kayu)'); setNewPotDesc('Potensi jasa penjahit pakaian / rias pengantin / usaha pengolahan kayu'); }}
+                className="px-2 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🧵 Jasa & Pengolahan Kayu
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewPotCat('Perikanan & Tambak (Lele/Nila)'); setNewPotDesc('Budidaya perikanan tambak lele / ikan nila / peternakan kambing'); }}
+                className="px-2 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🐟 Tambak Ikan & Ternak
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNewPotCat('Audit Guru Ngaji & Lembaga Dini'); setNewPotDesc('Lembaga pendidikan ngaji / PAUD / DKM aktif bina santri'); }}
+                className="px-2 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold transition shadow-2xs"
+              >
+                🕌 Guru Ngaji & PAUD
+              </button>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-2">
-              <select value={newPotCat} onChange={(e) => setNewPotCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-bold sm:w-40 shrink-0">
-                <option value="Pertanian">Pertanian</option>
-                <option value="Peternakan">Peternakan</option>
-                <option value="Usaha Mikro/UMKM">Usaha Mikro/UMKM</option>
-                <option value="Keterampilan Khusus">Keterampilan Khusus</option>
-                <option value="Lahan Kosong">Lahan Kosong</option>
+              <select value={newPotCat} onChange={(e) => setNewPotCat(e.target.value)} className="rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-bold sm:w-56 shrink-0">
+                <option value="Usaha Mikro & UMKM (Kuliner/Keripik/Peuyeum)">Usaha Mikro & UMKM (Kuliner/Keripik/Peuyeum)</option>
+                <option value="Pertanian & Peternakan (Jamur/Kambing/Ayam)">Pertanian & Peternakan (Jamur/Kambing/Ayam)</option>
+                <option value="Perikanan & Tambak (Lele/Nila)">Perikanan & Tambak (Lele/Nila)</option>
+                <option value="Jasa & Keterampilan (Penjahit/Rias/Pengolahan Kayu)">Jasa & Keterampilan (Penjahit/Rias/Pengolahan Kayu)</option>
+                <option value="Pengolahan Sampah & Inovasi (Pupuk/Kompos/Brisket)">Pengolahan Sampah & Inovasi (Pupuk/Kompos/Brisket)</option>
+                <option value="Audit Guru Ngaji & Lembaga Dini">Audit Guru Ngaji & Lembaga Dini</option>
+                <option value="Fasilitas Olahraga & Pemuda (Karang Taruna)">Fasilitas Olahraga & Pemuda (Karang Taruna)</option>
               </select>
-              <input type="text" value={newPotDesc} onChange={(e) => setNewPotDesc(e.target.value)} placeholder="Tulis potensi spesifik rumah tangga..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs" />
+              <input type="text" value={newPotDesc} onChange={(e) => setNewPotDesc(e.target.value)} placeholder="Tulis potensi spesifik rumah tangga / wilayah..." className="flex-1 rounded border border-slate-300 text-slate-900 bg-white px-3 py-2 text-xs font-medium" />
               <button type="button" onClick={addPotential} className="rounded bg-teal-sedang text-white px-5 py-2 text-xs font-bold hover:bg-kabut transition w-full sm:w-auto">Tambah</button>
             </div>
             {potentials.length > 0 && (
