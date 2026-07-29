@@ -167,10 +167,11 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
           const surv = h.survey?.[0];
           const rtName = h.rt?.rt_number || '';
           const rwName = h.rt?.rw?.rw_number || '';
+          const rtLabel = rwName && rtName ? `${rwName} / ${rtName}` : 'RW 01 / RT 01';
           return {
             id: h.id,
             family_size: surv?.family_size || 0,
-            rt_label: `${rwName} / ${rtName}`,
+            rt_label: rtLabel,
             problems: surv?.problem || [],
             potentials: surv?.potential || []
           };
@@ -189,8 +190,9 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
 
   // Filter surveys by RW/RT
   const filteredSurveys = surveys.filter(s => {
-    if (selectedRw !== 'All' && s.rt_label && !s.rt_label.startsWith(selectedRw)) return false;
-    if (selectedRt !== 'All' && s.rt_label && s.rt_label !== `${selectedRw} / ${selectedRt}`) return false;
+    const label = s.rt_label || 'RW 01 / RT 01';
+    if (selectedRw !== 'All' && !label.includes(selectedRw)) return false;
+    if (selectedRt !== 'All' && !label.includes(selectedRt)) return false;
     return true;
   });
 

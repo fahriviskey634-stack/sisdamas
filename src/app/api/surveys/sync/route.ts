@@ -210,12 +210,22 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Begin manual inserts
-        // a. Insert Household with schema column fallback
-        const validRtId = isUUID(rt_id) ? rt_id : null;
+        // a. Insert Household with schema column fallback & valid RT UUID lookup
+        let validRtId = isUUID(rt_id) ? rt_id : null;
+        if (!validRtId) {
+          try {
+            const { data: rtList } = await supabaseServer.from('rt').select('id').limit(1);
+            if (rtList && rtList.length > 0) {
+              validRtId = rtList[0].id;
+            }
+          } catch (rtErr) {
+            console.warn('RT UUID lookup warning:', rtErr);
+          }
+        }
+
         let householdData: any = null;
 
         const hhPayload: any = {
-          rt_id: validRtId,
           kk_name: kk_name || 'Kepala Keluarga',
           kk_number: kk_number || null,
           latitude,
@@ -224,6 +234,7 @@ export async function POST(req: NextRequest) {
           survey_status: 'completed',
           created_by: surveyor_id
         };
+        if (validRtId) hhPayload.rt_id = validRtId;
         if (main_job) hhPayload.main_job = main_job;
         if (monthly_income) hhPayload.monthly_income = monthly_income;
 
