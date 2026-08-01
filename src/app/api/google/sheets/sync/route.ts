@@ -24,10 +24,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           mocked: true,
-          message: "Data sensus berhasil diekspor ke Google Sheets (Mode Simulasi)",
+          message: "Data sensus siap diunduh dalam format Excel (.xlsx)",
           data: {
             exported_rows: 82,
-            sheet_url: `https://docs.google.com/spreadsheets/d/${spreadsheetId || 'mock-sheet-id'}/edit`,
+            sheet_url: spreadsheetId ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit` : `/api/reports/excel`,
+            download_url: `/api/reports/excel`,
             timestamp: new Date().toISOString()
           }
         });
@@ -35,10 +36,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           mocked: true,
-          message: "Data sensus berhasil diimpor dari Google Sheets (Mode Simulasi)",
+          message: "Data sensus berhasil diimpor (Mode Simulasi)",
           data: {
             imported_rows: 5,
-            sheet_url: `https://docs.google.com/spreadsheets/d/${spreadsheetId || 'mock-sheet-id'}/edit`,
+            sheet_url: spreadsheetId ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit` : `/api/reports/excel`,
+            download_url: `/api/reports/excel`,
             timestamp: new Date().toISOString()
           }
         });

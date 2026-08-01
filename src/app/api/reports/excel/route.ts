@@ -3,11 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabaseServer = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseServer = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
 
     // Fetch survey reports
     const { data: surveys, error } = await supabaseServer

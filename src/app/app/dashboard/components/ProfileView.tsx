@@ -67,20 +67,21 @@ export default function ProfileView({ handleLogout, rtTargets, setRtTargets }: a
             Hubungkan data sensus kependudukan platform Anda langsung dengan Google Sheets. Anda dapat mengekspor data lokal ke spreadsheet, atau mengimpor data yang ditulis perangkat desa.
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a
+              href="/api/reports/excel"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 text-xs transition cursor-pointer shadow-sm text-center"
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Unduh File Excel (.xlsx)
+            </a>
             <button
               onClick={() => handleSheetsSync('export')}
               disabled={syncingSheets}
               className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold py-2.5 text-xs transition cursor-pointer shadow-sm"
             >
-              <FileSpreadsheet className="h-4 w-4" /> Ekspor ke Sheets
-            </button>
-            <button
-              onClick={() => handleSheetsSync('import')}
-              disabled={syncingSheets}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-teal-sedang hover:bg-[#113a48] disabled:opacity-50 text-white font-bold py-2.5 text-xs transition cursor-pointer shadow-sm"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncingSheets ? 'animate-spin' : ''}`} /> Impor dari Sheets
+              <RefreshCw className={`h-4 w-4 ${syncingSheets ? 'animate-spin' : ''}`} /> Sinkronkan Google Sheets
             </button>
           </div>
 
@@ -91,17 +92,16 @@ export default function ProfileView({ handleLogout, rtTargets, setRtTargets }: a
                 Aksi: {sheetsSyncResult.actionType === 'export' ? 'Ekspor Sensus' : 'Impor Sensus'} •{' '}
                 {sheetsSyncResult.actionType === 'export'
                   ? `${sheetsSyncResult.data?.exported_rows} baris diekspor`
-                  : `${sheetsSyncResult.data?.imported_rows} baris diimpor`}{' '}
-                {sheetsSyncResult.mocked && '(Simulasi)'}
+                  : `${sheetsSyncResult.data?.imported_rows} baris diimpor`}
               </p>
               {sheetsSyncResult.data?.sheet_url && (
                 <a
                   href={sheetsSyncResult.data.sheet_url}
-                  target="_blank"
+                  target={sheetsSyncResult.data.sheet_url.startsWith('http') ? "_blank" : "_self"}
                   rel="noopener noreferrer"
-                  className="underline font-bold text-emerald-700 block mt-1 hover:text-emerald-900"
+                  className="inline-flex items-center gap-1 underline font-extrabold text-emerald-700 mt-1 hover:text-emerald-900"
                 >
-                  Buka Google Sheets ↗
+                  {sheetsSyncResult.data.sheet_url.startsWith('http') ? 'Buka Google Sheets ↗' : '📥 Download Spreadsheet Excel (.xlsx)'}
                 </a>
               )}
             </div>

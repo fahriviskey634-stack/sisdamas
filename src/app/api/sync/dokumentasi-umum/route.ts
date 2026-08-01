@@ -146,25 +146,14 @@ export async function POST(req: NextRequest) {
         const filename = `dok_${galleryName.replace(/\s+/g, '_')}_${Date.now()}_${i}.${extension}`;
 
         if (token && targetFolderId) {
-          try {
-            const fileObj = await uploadFileToDrive(photoUrl, filename, mimeType, targetFolderId, token);
-            urls.push({
-              ...fileObj,
-              type: isVideo ? 'video' : 'image'
-            });
-            continue;
-          } catch (uploadErr: any) {
-            console.error('[Galeri Foto Upload] Google Drive file upload error:', uploadErr.message);
-          }
+          const fileObj = await uploadFileToDrive(photoUrl, filename, mimeType, targetFolderId, token);
+          urls.push({
+            ...fileObj,
+            type: isVideo ? 'video' : 'image'
+          });
+        } else {
+          throw new Error('Gagal mendapatkan akses token Google Drive. Silakan perbarui GOOGLE_REFRESH_TOKEN.');
         }
-
-        // Safe Fallback: jika Drive API gagal/offline, gunakan DataURI langsung agar 100% tampil & bisa didownload
-        urls.push({
-          viewUrl: photoUrl,
-          downloadUrl: photoUrl,
-          driveUrl: photoUrl,
-          type: isVideo ? 'video' : 'image'
-        });
       } else {
         urls.push(photoUrl);
       }
