@@ -63,10 +63,11 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
             .order('created_at', { ascending: true });
 
           if (actData && actData.length > 0) {
-            setActivities(actData);
+            const cleanActs = actData.filter(a => a.kegiatan !== 'PROGRAM_GALLERY_STORE' && !a.kegiatan?.startsWith('PROGRAM_') && a.id !== '56000000-0000-0000-0000-000000000099');
+            setActivities(cleanActs);
             // Update localStorage cache
             const logs = JSON.parse(localStorage.getItem(`sukahaji_logbook_${activeNim}`) || '{}');
-            logs[selectedDate] = actData;
+            logs[selectedDate] = cleanActs;
             localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(logs));
           }
         }
@@ -276,7 +277,7 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
         localStorage.setItem(`sukahaji_logbook_${activeNim}`, JSON.stringify(allLogs));
       }
 
-      // 2. Pre-sync to Supabase in background
+      // 2. Pre-sync local drafts to Supabase Cloud so all dates are guaranteed saved
       try {
         await fetch('/api/sync/logbook', {
           method: 'POST',
@@ -287,12 +288,17 @@ export default function LogbookView({ currentUser }: { currentUser: any }) {
         console.warn('Pre-export sync warning:', syncErr);
       }
 
-      // 3. Post full logbookData to /api/export/logbook to generate DOCX directly from latest data
-      const res = await fetch('/api/export/logbook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: activeNim, logbookData: allLogs })
-      });
+      // 3. Fetch canonical export from GET /api/export/logbook?user_id=NIM (queries ALL dates in Supabase)
+      let res = await fetch(`/api/export/logbook?user_id=${activeNim}&t=${Date.now()}`);
+
+      // Fallback to POST with merged local payload if GET endpoint fails or returns empty
+      if (!res.ok) {
+        res = await fetch('/api/export/logbook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: activeNim, logbookData: allLogs })
+        });
+      }
 
       if (!res.ok) {
         throw new Error('Gagal mengekspor dokumen Word');

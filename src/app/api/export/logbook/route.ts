@@ -194,7 +194,9 @@ async function buildLogbookDocx(member: typeof KKN_MEMBERS[0], entries: any[]): 
     const year = d.getFullYear();
     const dateFormatted = `${day}/${month}/${year}`;
 
-    const acts = entry.logbook_activity || [];
+    const acts = (entry.logbook_activity || []).filter(
+      (a: any) => a.kegiatan !== 'PROGRAM_GALLERY_STORE' && !a.kegiatan?.startsWith('PROGRAM_') && a.id !== '56000000-0000-0000-0000-000000000099'
+    );
     for (const act of acts) {
       const photos = parsePhotos(act.bukti_foto_url);
       const imgRuns: docx.ImageRun[] = [];
@@ -355,15 +357,55 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'NIM tidak terdaftar dalam daftar anggota KKN' }, { status: 404 });
     }
 
-    let entries: any[] = [];
+    const mergedMap = new Map<string, any[]>();
 
-    if (logbookData && typeof logbookData === 'object') {
-      const dates = Object.keys(logbookData).sort();
-      entries = dates.map(d => ({
-        entry_date: d,
-        logbook_activity: logbookData[d] || []
-      }));
+    // 1. Fetch all cloud entries for this user from Supabase
+    if (supabaseUrl && supabaseServiceKey) {
+      try {
+        const supabaseServer = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
+        const { data: dbEntries } = await supabaseServer
+          .from('logbook_entry')
+          .select('id, entry_date')
+          .eq('nim', user_id)
+          .order('entry_date', { ascending: true });
+
+        if (dbEntries && dbEntries.length > 0) {
+          const entryIds = dbEntries.map(e => e.id);
+          const { data: dbActs } = await supabaseServer
+            .from('logbook_activity')
+            .select('*')
+            .in('entry_id', entryIds)
+            .order('created_at', { ascending: true });
+
+          dbEntries.forEach(entry => {
+            const acts = (dbActs || []).filter(a => a.entry_id === entry.id && a.kegiatan !== 'PROGRAM_GALLERY_STORE' && !a.kegiatan?.startsWith('PROGRAM_') && a.id !== '56000000-0000-0000-0000-000000000099');
+            if (acts.length > 0) {
+              mergedMap.set(entry.entry_date, acts);
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn('[Export Logbook POST] DB fetch warning:', dbErr);
+      }
     }
+
+    // 2. Merge incoming logbookData on top
+    if (logbookData && typeof logbookData === 'object') {
+      Object.keys(logbookData).forEach(d => {
+        if (logbookData[d] && Array.isArray(logbookData[d]) && logbookData[d].length > 0) {
+          const cleanActs = logbookData[d].filter((a: any) => a.kegiatan !== 'PROGRAM_GALLERY_STORE' && !a.kegiatan?.startsWith('PROGRAM_') && a.id !== '56000000-0000-0000-0000-000000000099');
+          if (cleanActs.length > 0) {
+            mergedMap.set(d, cleanActs);
+          }
+        }
+      });
+    }
+
+    const sortedDates = Array.from(mergedMap.keys()).sort();
+    const entries = sortedDates.map(d => ({
+      entry_date: d,
+      logbook_activity: mergedMap.get(d) || []
+    }));
 
     return await generateDocxResponse(member, entries);
   } catch (err: any) {
@@ -403,7 +445,7 @@ export async function GET(req: NextRequest) {
           .eq('nim', userId);
 
         if (startDate) entryQuery = entryQuery.gte('entry_date', startDate);
-        if (endDate) entryQuery = entryQuery.lte('entry_date', endDate);
+        if (endDate) entryQuery = endDate ? entryQuery.lte('entry_date', endDate) : entryQuery;
 
         const { data: entryData, error: entryError } = await entryQuery.order('entry_date', { ascending: true });
 
@@ -423,7 +465,7 @@ export async function GET(req: NextRequest) {
 
           entries = entryData.map((entry: any) => ({
             ...entry,
-            logbook_activity: (activityData || []).filter((act: any) => act.entry_id === entry.id)
+            logbook_activity: (activityData || []).filter((act: any) => act.entry_id === entry.id && act.kegiatan !== 'PROGRAM_GALLERY_STORE' && !act.kegiatan?.startsWith('PROGRAM_') && act.id !== '56000000-0000-0000-0000-000000000099')
           }));
         }
       } catch (dbErr) {

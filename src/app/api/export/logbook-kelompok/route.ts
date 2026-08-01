@@ -144,7 +144,9 @@ async function buildMemberSection(
     const year = d.getFullYear();
     const dateFormatted = `${day}/${month}/${year}`;
 
-    const acts = entry.logbook_activity || [];
+    const acts = (entry.logbook_activity || []).filter(
+      (a: any) => a.kegiatan !== 'PROGRAM_GALLERY_STORE' && !a.kegiatan?.startsWith('PROGRAM_') && a.id !== '56000000-0000-0000-0000-000000000099'
+    );
     for (const act of acts) {
       const photos = parsePhotos(act.bukti_foto_url);
       const imgRuns: docx.ImageRun[] = [];

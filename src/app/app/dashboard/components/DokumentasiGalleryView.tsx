@@ -83,7 +83,9 @@ export default function DokumentasiGalleryView() {
           if (!selectedProgId) setSelectedProgId(merged[0].id);
           if (!uploadTargetProgId) setUploadTargetProgId(merged[0].id);
         }
-        localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(merged));
+        try {
+          localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(merged));
+        } catch {}
       }
     } catch {} finally {
       setIsRefreshing(false);
@@ -126,8 +128,8 @@ export default function DokumentasiGalleryView() {
         const img = new Image();
         img.src = event.target?.result as string;
         img.onload = () => {
-          const maxWidth = 1200;
-          const maxHeight = 1200;
+          const maxWidth = 1920;
+          const maxHeight = 1920;
           let width = img.width;
           let height = img.height;
           if (width > height) {
@@ -146,7 +148,7 @@ export default function DokumentasiGalleryView() {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
         };
         img.onerror = () => {
           const fallbackReader = new FileReader();
@@ -203,44 +205,57 @@ export default function DokumentasiGalleryView() {
     const currentGroup = selectedGroupFilter === 'all' ? '56' : selectedGroupFilter;
 
     setUploading(true);
-    setUploadStatus(`Membuat folder "${folderTitle}" di Google Drive Kelompok ${currentGroup}...`);
     setUploadError('');
 
     try {
-      // 1. Upload ke Google Drive via API dokumentasi-umum (otomatis membuat folder terpisah di Drive)
-      const base64Photos = filePreviews.map(p => p.url);
-      const driveRes = await fetch('/api/sync/dokumentasi-umum', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          galleryName: folderTitle,
-          photos: base64Photos,
-          group: currentGroup
-        })
-      });
+      // 1. Upload ke Google Drive per file secara sekuensial (chunking 1 file per HTTP request)
+      // Mencegah HTTP 413 Payload Too Large & Unexpected Token JSON syntax error!
+      const newViewUrls: any[] = [];
+      const total = filePreviews.length;
+      let lastFolderName = folderTitle;
 
-      const textRes = await driveRes.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(textRes);
-      } catch {
-        throw new Error(`Error server Drive (${driveRes.status}): ${textRes.substring(0, 100)}`);
+      for (let i = 0; i < total; i++) {
+        setUploadStatus(`Mengunggah file ${i + 1} dari ${total} ke Google Drive...`);
+        const item = filePreviews[i];
+
+        const driveRes = await fetch('/api/sync/dokumentasi-umum', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            galleryName: folderTitle,
+            photos: [item.url],
+            group: currentGroup
+          })
+        });
+
+        const textRes = await driveRes.text();
+        let data: any = {};
+        try {
+          data = JSON.parse(textRes);
+        } catch {
+          throw new Error(`Gagal unggah file ke-${i + 1}: Ukuran file terlalu besar (HTTP ${driveRes.status})`);
+        }
+
+        if (!driveRes.ok) {
+          throw new Error(data.error || `Gagal mengunggah foto ke-${i + 1}`);
+        }
+
+        if (data.folderName) lastFolderName = data.folderName;
+
+        const driveUrls = data.urls || [];
+        driveUrls.forEach((u: any) => {
+          if (typeof u === 'string') {
+            newViewUrls.push({ viewUrl: u, downloadUrl: u, driveUrl: u, type: item.type });
+          } else {
+            newViewUrls.push({
+              viewUrl: u.viewUrl || u,
+              downloadUrl: u.downloadUrl || u.viewUrl || u,
+              driveUrl: u.driveUrl || u.viewUrl || u,
+              type: u.type || item.type
+            });
+          }
+        });
       }
-
-      if (!driveRes.ok) {
-        throw new Error(data.error || 'Gagal membuat folder & mengunggah file ke Google Drive');
-      }
-
-      const driveUrls = data.urls || [];
-      const newViewUrls = driveUrls.map((u: any) => {
-        if (typeof u === 'string') return { viewUrl: u, downloadUrl: u, driveUrl: u, type: 'image' };
-        return {
-          viewUrl: u.viewUrl || u,
-          downloadUrl: u.downloadUrl || u.viewUrl || u,
-          driveUrl: u.driveUrl || u.viewUrl || u,
-          type: u.type || 'image'
-        };
-      });
 
       let updatedPrograms = [...programs];
       let targetProgId = uploadTargetProgId;
@@ -259,7 +274,7 @@ export default function DokumentasiGalleryView() {
           pic: `Tim PDD KKN ${currentGroup}`,
           status: 'Completed',
           progress: 100,
-          description: `Folder Drive: ${data.folderName || folderTitle}`,
+          description: `Folder Drive: ${lastFolderName || folderTitle}`,
           evaluation: '',
           photo_urls: newViewUrls,
           group: currentGroup
@@ -280,10 +295,34 @@ export default function DokumentasiGalleryView() {
         });
       }
 
+      // Helper aman untuk penyimpanan localStorage agar tidak crash jika kuota penuh
+      const safeLocalStorageSet = (key: string, dataObj: any) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(dataObj));
+        } catch (lsErr) {
+          console.warn('[LocalStorage Limit] Kuota lokal penuh, menyimpan tanpa foto base64 lokal:', lsErr);
+          try {
+            const sanitized = (Array.isArray(dataObj) ? dataObj : []).map((item: any) => {
+              if (item && item.photo_urls && Array.isArray(item.photo_urls)) {
+                return {
+                  ...item,
+                  photo_urls: item.photo_urls.filter((u: any) => {
+                    const str = typeof u === 'string' ? u : (u?.viewUrl || '');
+                    return !str.startsWith('data:');
+                  })
+                };
+              }
+              return item;
+            });
+            localStorage.setItem(key, JSON.stringify(sanitized));
+          } catch {}
+        }
+      };
+
       // 2. Simpan ke LocalStorage & Cloud Supabase Database
       setPrograms(updatedPrograms);
       setSelectedProgId(targetProgId);
-      localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(updatedPrograms));
+      safeLocalStorageSet('sukahaji_siklus4_programs_v3', updatedPrograms);
 
       try {
         const syncRes = await fetch('/api/sync/programs', {
@@ -294,13 +333,13 @@ export default function DokumentasiGalleryView() {
         const syncData = await syncRes.json();
         if (syncData.success && Array.isArray(syncData.data) && syncData.data.length > 0) {
           setPrograms(syncData.data);
-          localStorage.setItem('sukahaji_siklus4_programs_v3', JSON.stringify(syncData.data));
+          safeLocalStorageSet('sukahaji_siklus4_programs_v3', syncData.data);
         }
       } catch (syncErr) {
         console.warn('Gagal sync cloud:', syncErr);
       }
 
-      setUploadStatus(`✓ Sukses! Folder "${data.folderName || folderTitle}" berhasil dibuat di Google Drive!`);
+      setUploadStatus(`✓ Sukses! Folder "${lastFolderName || folderTitle}" berhasil dibuat di Google Drive!`);
       setTimeout(() => {
         setUploading(false);
         setShowUploadModal(false);

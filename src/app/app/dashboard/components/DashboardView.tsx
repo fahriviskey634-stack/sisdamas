@@ -135,9 +135,21 @@ export default function DashboardView({ switchTab, draftCount, syncing, syncStat
     });
   };
 
-  // Load survey data from localStorage drafts only (no mock data)
+  // Load survey data from Supabase Cloud Database + Realtime Listener
   useEffect(() => {
     fetchSurveys();
+
+    // Realtime listener for cross-device Dashboard Statistics sync
+    const channel = supabase
+      .channel('realtime_dashboard_stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household' }, () => {
+        fetchSurveys();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchSurveys = async () => {

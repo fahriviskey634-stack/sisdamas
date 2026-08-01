@@ -145,7 +145,7 @@ async function uploadPhotoToGoogleDrive(photoBase64: string, filename: string, s
   }
 }
 
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
 // Zod validation schema for coordinate boundaries
 const coordinateSchema = z.object({
@@ -165,9 +165,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabaseServer = createClient(supabaseUrl, supabaseAnonKey);
-    const results = [];
+    const supabaseServer = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
     const isUUID = (str?: string) => Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+    const toValidUuid = (str?: string) => {
+      if (!str) return '56000000-0000-0000-0000-000000000056';
+      if (isUUID(str)) return str;
+      const hex = require('crypto').createHash('md5').update(String(str)).digest('hex');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+    };
+
+    const results: any[] = [];
 
     for (const item of surveys) {
       const {
@@ -225,6 +232,8 @@ export async function POST(req: NextRequest) {
 
         let householdData: any = null;
 
+        const validSurveyorUuid = toValidUuid(surveyor_id);
+
         const hhPayload: any = {
           kk_name: kk_name || 'Kepala Keluarga',
           kk_number: kk_number || null,
@@ -232,7 +241,7 @@ export async function POST(req: NextRequest) {
           longitude,
           gps_accuracy: gps_accuracy || 0,
           survey_status: 'completed',
-          created_by: surveyor_id
+          created_by: validSurveyorUuid
         };
         if (validRtId) hhPayload.rt_id = validRtId;
         if (main_job) hhPayload.main_job = main_job;
@@ -240,12 +249,19 @@ export async function POST(req: NextRequest) {
 
         const resHh = await supabaseServer.from('household').insert([hhPayload]).select().single();
         if (resHh.error) {
-          // Schema fallback: if columns don't exist yet in Supabase, retry without new optional columns
+          // Schema fallback: if columns don't exist yet in Supabase, retry without optional columns
           delete hhPayload.main_job;
           delete hhPayload.monthly_income;
           const resHhRetry = await supabaseServer.from('household').insert([hhPayload]).select().single();
-          if (resHhRetry.error) throw resHhRetry.error;
-          householdData = resHhRetry.data;
+          if (resHhRetry.error) {
+            // Further fallback: retry without created_by if FK constraint fails
+            delete hhPayload.created_by;
+            const resHhFinal = await supabaseServer.from('household').insert([hhPayload]).select().single();
+            if (resHhFinal.error) throw resHhFinal.error;
+            householdData = resHhFinal.data;
+          } else {
+            householdData = resHhRetry.data;
+          }
         } else {
           householdData = resHh.data;
         }
@@ -254,11 +270,11 @@ export async function POST(req: NextRequest) {
         let surveyData: any = null;
         const svPayload: any = {
           household_id: householdData.id,
-          surveyor_id,
+          surveyor_id: validSurveyorUuid,
           project_id: '56000000-0000-0000-0000-000000000056', // Static Project UUID Kelompok 56
-          family_size,
-          housing_status,
-          housing_condition,
+          family_size: Number(family_size) || 1,
+          housing_status: housing_status || 'Milik Sendiri',
+          housing_condition: housing_condition || 'Layak Huni',
           client_uuid
         };
         if (main_job) svPayload.main_job = main_job;
@@ -308,7 +324,7 @@ export async function POST(req: NextRequest) {
                 household_id: householdData.id,
                 storage_url: driveUrl,
                 caption: `Fasad depan rumah ${kk_name} (Google Drive)`,
-                uploaded_by: surveyor_id
+                uploaded_by: validSurveyorUuid
               }
             ]);
           } catch (photoErr) {

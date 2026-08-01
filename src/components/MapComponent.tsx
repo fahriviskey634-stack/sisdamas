@@ -228,9 +228,21 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
     setTimeout(() => setSyncMsg(''), 3000);
   };
 
-  // Fetch real household coordinates and problems list from Supabase + localStorage
+  // Fetch real household coordinates and problems list from Supabase + localStorage + Realtime
   useEffect(() => {
     fetchRealMapData();
+
+    // Supabase Realtime Broadcast Listener for instant cross-device updates
+    const channel = supabase
+      .channel('realtime_map_households')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household' }, () => {
+        fetchRealMapData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleDeletePin = async (pinId: string, kkName: string) => {
@@ -355,65 +367,84 @@ export default function MapComponent({ defaultMapType = 'hybrid', currentUser }:
   };
 
   const handleExportCSVForLooker = () => {
-    if (filteredPins.length === 0) return alert('Tidak ada data pin untuk diekspor.');
+    const exportablePins = filteredPins.filter(p => !p.id.startsWith('draft-') && !p.id.includes('draft'));
+    if (exportablePins.length === 0) return alert('Tidak ada data pin tersinkronkan (non-draf) untuk diekspor.');
 
     const headers = ['ID Pin', 'Nama KK', 'RT/RW', 'Latitude', 'Longitude', 'Akurasi GPS (m)', 'Status Verifikasi', 'Kesejahteraan', 'Kondisi Rumah', 'Anggota Keluarga', 'Masalah Utama', 'Deskripsi Masalah'];
-    const rows = filteredPins.map(p => {
+    const rows = exportablePins.map(p => {
+      const lat = Number(p.latitude);
+      const lon = Number(p.longitude);
       const mainProb = p.problems?.[0] || { category: '-', description: '-' };
+      const safeKkName = (p.kk_name || '').replace(/"/g, '""').replace(/[\r\n]+/g, ' ');
+      const safeDesc = (mainProb.description || '-').replace(/"/g, '""').replace(/[\r\n]+/g, ' ');
       return [
         `"${p.id}"`,
-        `"${p.kk_name.replace(/"/g, '""')}"`,
-        `"${p.rt_label}"`,
-        p.latitude,
-        p.longitude,
-        p.gps_accuracy,
-        `"${p.survey_status}"`,
+        `"${safeKkName}"`,
+        `"${p.rt_label || 'RT 01 / RW 01'}"`,
+        Number.isFinite(lat) ? lat : 0,
+        Number.isFinite(lon) ? lon : 0,
+        Number(p.gps_accuracy) || 0,
+        `"${p.survey_status || 'completed'}"`,
         `"${p.welfare_level || 'Sejahtera I'}"`,
         `"${p.housing_condition || 'Layak Huni'}"`,
-        p.family_size || 4,
-        `"${mainProb.category}"`,
-        `"${mainProb.description.replace(/"/g, '""')}"`
+        Number(p.family_size) || 4,
+        `"${mainProb.category || '-'}"`,
+        `"${safeDesc}"`
       ].join(',');
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `gis_sukahaji_google_looker_studio_${Date.now()}.csv`);
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `gis_sukahaji_looker_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleExportGeoJSON = () => {
-    if (filteredPins.length === 0) return alert('Tidak ada data pin untuk diekspor.');
+    const exportablePins = filteredPins.filter(p => !p.id.startsWith('draft-') && !p.id.includes('draft'));
+    if (exportablePins.length === 0) return alert('Tidak ada data pin tersinkronkan (non-draf) untuk diekspor.');
+
+    const validFeatures = exportablePins
+      .map(p => {
+        const lat = Number(p.latitude);
+        const lon = Number(p.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [lon, lat] // RFC 7946 Order: [Longitude, Latitude]
+          },
+          properties: {
+            id: p.id,
+            kk_name: p.kk_name || '',
+            rt_label: p.rt_label || '',
+            survey_status: p.survey_status || 'completed',
+            welfare_level: p.welfare_level || '',
+            housing_condition: p.housing_condition || '',
+            family_size: Number(p.family_size) || 0,
+            problems: p.problems || []
+          }
+        };
+      })
+      .filter(Boolean);
 
     const geojson = {
       type: 'FeatureCollection',
-      features: filteredPins.map(p => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [p.longitude, p.latitude]
-        },
-        properties: {
-          id: p.id,
-          kk_name: p.kk_name,
-          rt_label: p.rt_label,
-          survey_status: p.survey_status,
-          welfare_level: p.welfare_level,
-          housing_condition: p.housing_condition,
-          family_size: p.family_size,
-          problems: p.problems
-        }
-      }))
+      crs: {
+        type: 'name',
+        properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' }
+      },
+      features: validFeatures
     };
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(geojson, null, 2));
+    const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json;charset=utf-8' });
     const link = document.createElement('a');
-    link.setAttribute('href', dataStr);
-    link.setAttribute('download', `gis_sukahaji_google_earth_${Date.now()}.geojson`);
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `gis_sukahaji_qgis_${Date.now()}.geojson`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
